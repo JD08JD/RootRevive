@@ -1,46 +1,119 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabaseClient";
+
+interface Profile {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  is_admin: boolean;
+}
 
 interface AuthContextType {
+  user: User | null;
+  profile: Profile | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo credentials (in a real app, this would be handled by backend)
-const DEMO_CREDENTIALS = {
-  username: "admin",
-  password: "admin123"
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  useEffect(() => {
-    // Check if user is already logged in
-    const authStatus = localStorage.getItem("isAdminAuthenticated");
-    if (authStatus === "true") {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from<Profile>("profiles")
+      .select("id, email, display_name, is_admin")
+      .eq("id", userId)
+      .single();
 
-  const login = (username: string, password: string): boolean => {
-    if (username === DEMO_CREDENTIALS.username && password === DEMO_CREDENTIALS.password) {
-      setIsAuthenticated(true);
-      localStorage.setItem("isAdminAuthenticated", "true");
-      return true;
+    if (!error && data) {
+      setProfile(data);
+    } else {
+      setProfile(null);
     }
-    return false;
   };
 
-  const logout = () => {
+  const createProfileIfMissing = async (user: User) => {
+    if (!user.id) return;
+
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        email: user.email,
+        display_name: user.email?.split("@")[0] ?? null,
+        is_admin: false,
+      },
+      { onConflict: "id" }
+    );
+
+    if (!error) {
+      await fetchProfile(user.id);
+    }
+  };
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+
+      if (session?.user) {
+        setUser(session.user);
+        setIsAuthenticated(true);
+        await fetchProfile(session.user.id);
+      }
+    };
+
+    initAuth();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const sessionUser = session?.user || null;
+      setUser(sessionUser);
+      setIsAuthenticated(Boolean(sessionUser));
+
+      if (sessionUser) {
+        await fetchProfile(sessionUser.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      listener.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.session) {
+      return false;
+    }
+
+    const loggedUser = data.user;
+    setUser(loggedUser);
+    setIsAuthenticated(true);
+    await createProfileIfMissing(loggedUser);
+
+    return true;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("isAdminAuthenticated");
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, isAuthenticated, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

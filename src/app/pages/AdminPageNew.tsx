@@ -38,10 +38,14 @@ export default function AdminPageNew() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (product: Product) => {
+  const handleDelete = async (product: Product) => {
     if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
-      deleteProduct(product.id);
-      showToast(`"${product.name}" has been deleted successfully`, "success");
+      const success = await deleteProduct(product.id);
+      if (success) {
+        showToast(`"${product.name}" has been deleted successfully`, "success");
+      } else {
+        showToast(`Unable to delete "${product.name}".`, "error");
+      }
     }
   };
 
@@ -51,13 +55,21 @@ export default function AdminPageNew() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (productData: Omit<Product, "id">) => {
+  const handleSubmit = async (productData: Omit<Product, "id">) => {
     if (modalMode === "add") {
-      addProduct(productData);
-      showToast(`"${productData.name}" has been added successfully`, "success");
+      const success = await addProduct(productData);
+      if (success) {
+        showToast(`"${productData.name}" has been added successfully`, "success");
+      } else {
+        showToast(`Unable to add "${productData.name}".`, "error");
+      }
     } else if (editingProduct) {
-      updateProduct(editingProduct.id, productData);
-      showToast(`"${productData.name}" has been updated successfully`, "success");
+      const success = await updateProduct(editingProduct.id, productData);
+      if (success) {
+        showToast(`"${productData.name}" has been updated successfully`, "success");
+      } else {
+        showToast(`Unable to update "${productData.name}".`, "error");
+      }
     }
   };
 

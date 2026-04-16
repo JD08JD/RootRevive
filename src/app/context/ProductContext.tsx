@@ -1,52 +1,115 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Product, products as initialProducts } from "../data/products";
+import { Product } from "../data/products";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "./AuthContext";
 
 interface ProductContextType {
   products: Product[];
-  addProduct: (product: Omit<Product, "id">) => void;
-  updateProduct: (id: string, product: Omit<Product, "id">) => void;
-  deleteProduct: (id: string) => void;
+  loading: boolean;
+  addProduct: (product: Omit<Product, "id">) => Promise<boolean>;
+  updateProduct: (id: string, product: Omit<Product, "id">) => Promise<boolean>;
+  deleteProduct: (id: string) => Promise<boolean>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
+const mapProductRow = (row: any): Product => ({
+  id: row.id,
+  name: row.name,
+  category: row.category,
+  price: Number(row.price),
+  description: row.description,
+  benefits: row.benefits || [],
+  image: row.image_url || row.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
+  featured: row.featured || false,
+});
+
 export function ProductProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(() => {
-    // Try to load products from localStorage
-    const savedProducts = localStorage.getItem("products");
-    if (savedProducts) {
-      return JSON.parse(savedProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  const refreshProducts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setProducts(data.map(mapProductRow));
+    } else {
+      console.error("Unable to load products", error);
     }
-    return initialProducts;
-  });
+    setLoading(false);
+  };
 
-  // Save to localStorage whenever products change
   useEffect(() => {
-    localStorage.setItem("products", JSON.stringify(products));
-  }, [products]);
+    refreshProducts();
+  }, []);
 
-  const addProduct = (productData: Omit<Product, "id">) => {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now().toString(), // Simple ID generation
-    };
-    setProducts((prev) => [...prev, newProduct]);
+  const addProduct = async (productData: Omit<Product, "id">) => {
+    if (!user) {
+      return false;
+    }
+
+    const { error } = await supabase.from("products").insert({
+      name: productData.name,
+      category: productData.category,
+      price: productData.price,
+      description: productData.description,
+      image_url: productData.image,
+      benefits: productData.benefits,
+      featured: productData.featured,
+      created_by: user.id,
+    });
+
+    if (error) {
+      console.error("Unable to add product", error);
+      return false;
+    }
+
+    await refreshProducts();
+    return true;
   };
 
-  const updateProduct = (id: string, productData: Omit<Product, "id">) => {
-    setProducts((prev) =>
-      prev.map((product) =>
-        product.id === id ? { ...productData, id } : product
-      )
-    );
+  const updateProduct = async (id: string, productData: Omit<Product, "id">) => {
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: productData.name,
+        category: productData.category,
+        price: productData.price,
+        description: productData.description,
+        image_url: productData.image,
+        benefits: productData.benefits,
+        featured: productData.featured,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Unable to update product", error);
+      return false;
+    }
+
+    await refreshProducts();
+    return true;
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id));
+  const deleteProduct = async (id: string) => {
+    const { error } = await supabase.from("products").delete().eq("id", id);
+
+    if (error) {
+      console.error("Unable to delete product", error);
+      return false;
+    }
+
+    await refreshProducts();
+    return true;
   };
 
   return (
-    <ProductContext.Provider value={{ products, addProduct, updateProduct, deleteProduct }}>
+    <ProductContext.Provider value={{ products, loading, addProduct, updateProduct, deleteProduct }}>
       {children}
     </ProductContext.Provider>
   );
