@@ -22,9 +22,12 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
     benefits: ["", "", "", ""]
   });
 
+  console.log(`[MODAL] ProductFormModal render - isOpen: ${isOpen}, mode: ${mode}, product:`, product);
+
   useEffect(() => {
+    console.log(`[MODAL] useEffect triggered - mode: ${mode}, product:`, product);
     if (product && mode === "edit") {
-      setFormData({
+      const newFormData = {
         name: product.name,
         category: product.category,
         price: product.price.toString(),
@@ -32,10 +35,11 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
         image: product.image,
         featured: product.featured || false,
         benefits: [...product.benefits, "", "", "", ""].slice(0, 4)
-      });
+      };
+      console.log(`[MODAL] Setting edit form data:`, newFormData);
+      setFormData(newFormData);
     } else {
-      // Reset form for add mode
-      setFormData({
+      const resetFormData = {
         name: "",
         category: "fruits",
         price: "",
@@ -43,13 +47,17 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
         image: "",
         featured: false,
         benefits: ["", "", "", ""]
-      });
+      };
+      console.log(`[MODAL] Resetting form for add mode:`, resetFormData);
+      setFormData(resetFormData);
     }
   }, [product, mode, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    console.log(`[MODAL] handleSubmit: Form submitted at ${new Date().toISOString()}`);
+    console.log(`[MODAL] handleSubmit: Current form data:`, formData);
+
     const productData: Omit<Product, "id"> = {
       name: formData.name,
       category: formData.category,
@@ -60,7 +68,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       benefits: formData.benefits.filter(b => b.trim() !== "")
     };
 
+    console.log(`[MODAL] handleSubmit: Processed product data:`, productData);
+    console.log(`[MODAL] handleSubmit: Calling onSubmit...`);
     onSubmit(productData);
+    console.log(`[MODAL] handleSubmit: Closing modal...`);
     onClose();
   };
 

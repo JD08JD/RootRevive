@@ -15,14 +15,19 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(`[LOGIN] handleSubmit: Login attempt for email: ${email}`);
     setError("");
     setIsLoading(true);
 
     const success = await login(email, password);
+    console.log(`[LOGIN] handleSubmit: Login result: ${success}`);
 
     if (success) {
+      console.log(`[LOGIN] handleSubmit: Login successful, navigating to /admin`);
+      setIsLoading(false);
       navigate("/admin");
     } else {
+      console.log(`[LOGIN] handleSubmit: Login failed, showing error`);
       setError("Invalid email or password");
       setIsLoading(false);
     }

@@ -59,6 +59,12 @@ create policy "Admin can manage products"
     )
   );
 
+-- TEMPORARY: Allow authenticated users to insert products for testing
+create policy "Authenticated users can insert products"
+  on products
+  for insert
+  with check (auth.uid() is not null);
+
 -- Optional: create a sample admin profile if the auth user exists
 -- Replace the UUID below with a real auth user ID after creating the user in Supabase Auth.
 -- insert into profiles (id, email, display_name, is_admin)

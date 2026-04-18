@@ -15,6 +15,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,16 +25,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from<Profile>("profiles")
-      .select("id, email, display_name, is_admin")
-      .eq("id", userId)
-      .single();
+  console.log(`[AUTH] AuthProvider initialized at ${new Date().toISOString()}`);
 
-    if (!error && data) {
-      setProfile(data);
-    } else {
+  const fetchProfile = async (userId: string) => {
+    console.log(`[AUTH] fetchProfile called for userId: ${userId}`);
+    try {
+      console.log(`[AUTH] fetchProfile: Starting query...`);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email, display_name, is_admin")
+        .eq("id", userId)
+        .single();
+
+      console.log(`[AUTH] fetchProfile: Query completed, error:`, error);
+      console.log(`[AUTH] fetchProfile: Query data:`, data);
+
+      if (error) {
+        console.error(`[AUTH] fetchProfile error:`, error);
+        setProfile(null);
+      } else if (data) {
+        console.log(`[AUTH] fetchProfile success:`, data);
+        setProfile(data);
+      } else {
+        console.warn(`[AUTH] fetchProfile: No profile data found`);
+        setProfile(null);
+      }
+    } catch (err) {
+      console.error(`[AUTH] fetchProfile exception:`, err);
       setProfile(null);
     }
   };
@@ -41,43 +59,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const createProfileIfMissing = async (user: User) => {
     if (!user.id) return;
 
-    const { error } = await supabase.from("profiles").upsert(
-      {
+    try {
+      // First check if profile exists
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (existingProfile) {
+        console.log(`[AUTH] createProfileIfMissing: Profile already exists, skipping create`);
+        await fetchProfile(user.id);
+        return;
+      }
+
+      // Profile doesn't exist, create it
+      const { error } = await supabase.from("profiles").insert({
         id: user.id,
         email: user.email,
         display_name: user.email?.split("@")[0] ?? null,
         is_admin: false,
-      },
-      { onConflict: "id" }
-    );
+      });
 
-    if (!error) {
-      await fetchProfile(user.id);
+      if (error) {
+        console.warn("[AUTH] Profile create error:", error);
+      } else {
+        console.log(`[AUTH] createProfileIfMissing: Profile created successfully`);
+        await fetchProfile(user.id);
+      }
+    } catch (err) {
+      console.error("[AUTH] Exception in createProfileIfMissing:", err);
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
+      console.log(`[AUTH] initAuth: Checking session...`);
       const { data } = await supabase.auth.getSession();
       const session = data.session;
 
       if (session?.user) {
+        console.log(`[AUTH] initAuth: Session found for user:`, session.user.email);
         setUser(session.user);
         setIsAuthenticated(true);
         await fetchProfile(session.user.id);
+      } else {
+        console.log(`[AUTH] initAuth: No session found`);
       }
     };
 
     initAuth();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log(`[AUTH] onAuthStateChange: Event=${_event}, Session=${!!session}`);
       const sessionUser = session?.user || null;
       setUser(sessionUser);
       setIsAuthenticated(Boolean(sessionUser));
 
       if (sessionUser) {
+        console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
+        // Always fetch fresh profile data on auth state change
         await fetchProfile(sessionUser.id);
       } else {
+        console.log(`[AUTH] onAuthStateChange: User logged out`);
         setProfile(null);
       }
     });
@@ -88,21 +132,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log(`[AUTH] login: Attempting login for email: ${email}`);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error || !data.session) {
+      if (error || !data.session) {
+        console.error(`[AUTH] login: Failed - Error:`, error?.message);
+        return false;
+      }
+
+      const loggedUser = data.user;
+      console.log(`[AUTH] login: Success - User:`, loggedUser.email);
+      // Note: user and isAuthenticated will be set by onAuthStateChange
+      // Profile will be fetched by onAuthStateChange
+
+      console.log(`[AUTH] login: Login process completed successfully`);
+      return true;
+    } catch (err) {
+      console.error(`[AUTH] login: Exception:`, err);
       return false;
     }
-
-    const loggedUser = data.user;
-    setUser(loggedUser);
-    setIsAuthenticated(true);
-    await createProfileIfMissing(loggedUser);
-
-    return true;
   };
 
   const logout = async () => {
@@ -112,8 +164,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   };
 
+  const refreshProfile = async () => {
+    if (user?.id) {
+      console.log(`[AUTH] refreshProfile: Manually refreshing profile for user:`, user.email);
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, isAuthenticated, login, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

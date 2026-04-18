@@ -29,17 +29,27 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  const refreshProducts = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
+  console.log(`[PRODUCT] ProductProvider initialized at ${new Date().toISOString()}`);
 
-    if (!error && data) {
-      setProducts(data.map(mapProductRow));
-    } else {
-      console.error("Unable to load products", error);
+  const refreshProducts = async () => {
+    console.log(`[PRODUCT] refreshProducts: Starting...`);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(`[PRODUCT] refreshProducts: Supabase error:`, error);
+      } else if (data) {
+        console.log(`[PRODUCT] refreshProducts: Success - Loaded ${data.length} products`);
+        setProducts(data.map(mapProductRow));
+      } else {
+        console.warn(`[PRODUCT] refreshProducts: No data returned`);
+      }
+    } catch (err) {
+      console.error(`[PRODUCT] refreshProducts: Exception:`, err);
     }
     setLoading(false);
   };
@@ -49,28 +59,84 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addProduct = async (productData: Omit<Product, "id">) => {
+    console.log(`[PRODUCT] addProduct: Called with data:`, productData);
+    console.log(`[PRODUCT] addProduct: Current user:`, user);
+
     if (!user) {
+      console.error(`[PRODUCT] addProduct: No user authenticated - cannot add product`);
       return false;
     }
 
-    const { error } = await supabase.from("products").insert({
-      name: productData.name,
-      category: productData.category,
-      price: productData.price,
-      description: productData.description,
-      image_url: productData.image,
-      benefits: productData.benefits,
-      featured: productData.featured,
-      created_by: user.id,
-    });
+    // Check session
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log(`[PRODUCT] addProduct: Current session:`, sessionData.session ? 'Valid' : 'None');
 
-    if (error) {
-      console.error("Unable to add product", error);
-      return false;
+    if (!sessionData.session) {
+      console.error(`[PRODUCT] addProduct: No valid session - refreshing...`);
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error(`[PRODUCT] addProduct: Session refresh failed:`, refreshError);
+        return false;
+      }
+      console.log(`[PRODUCT] addProduct: Session refreshed`);
     }
 
-    await refreshProducts();
-    return true;
+    try {
+      console.log(`[PRODUCT] addProduct: About to call supabase.from("products").insert()`);
+      console.log(`[PRODUCT] addProduct: Insert data:`, {
+        name: productData.name,
+        category: productData.category,
+        price: productData.price,
+        description: productData.description,
+        image_url: productData.image,
+        benefits: productData.benefits,
+        featured: productData.featured,
+        created_by: user.id,
+      });
+
+      const insertPromise = supabase.from("products").insert({
+        name: productData.name,
+        category: productData.category,
+        price: productData.price,
+        description: productData.description,
+        image_url: productData.image,
+        benefits: productData.benefits,
+        featured: productData.featured,
+        // created_by: user.id, // Temporarily removed for testing
+      });
+
+      // Add timeout to detect hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Supabase insert timeout after 30 seconds')), 30000);
+      });
+
+      const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any;
+      console.log(`[PRODUCT] addProduct: Promise resolved`);
+
+      console.log(`[PRODUCT] addProduct: Supabase response - data:`, data);
+      console.log(`[PRODUCT] addProduct: Supabase response - error:`, error);
+
+      if (error) {
+        console.error(`[PRODUCT] addProduct: Supabase insert error:`, error);
+        console.error(`[PRODUCT] addProduct: Error details:`, {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        return false;
+      }
+
+      console.log(`[PRODUCT] addProduct: Insert successful, refreshing products...`);
+      await refreshProducts();
+      console.log(`[PRODUCT] addProduct: Complete success`);
+      return true;
+    } catch (err) {
+      console.error(`[PRODUCT] addProduct: Exception:`, err);
+      console.error(`[PRODUCT] addProduct: Exception type:`, typeof err);
+      console.error(`[PRODUCT] addProduct: Exception stack:`, err instanceof Error ? err.stack : 'No stack');
+      return false;
+    }
   };
 
   const updateProduct = async (id: string, productData: Omit<Product, "id">) => {

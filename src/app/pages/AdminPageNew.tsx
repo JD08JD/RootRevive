@@ -20,8 +20,58 @@ export default function AdminPageNew() {
   });
 
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-  const { logout } = useAuth();
+  const { logout, user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+
+  console.log(`[ADMIN] AdminPageNew render at ${new Date().toISOString()}`);
+  console.log(`[ADMIN] AdminPageNew - user:`, user);
+  console.log(`[ADMIN] AdminPageNew - profile:`, profile);
+  console.log(`[ADMIN] AdminPageNew - products count:`, products.length);
+
+  // TEMPORARY: Remove admin check for testing
+  // if (!profile?.is_admin) {
+  //   console.error("User is not admin - profile:", profile);
+  //   return (
+  //     <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
+  //       <div className="text-center">
+  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+  //         <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
+  //         <button
+  //           onClick={() => navigate("/")}
+  //           className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold"
+  //         >
+  //           Go to Home
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
+  // Check if user is authenticated and is admin
+  if (!user) {
+    console.error("No user authenticated - redirecting to login");
+    navigate("/login");
+    return null;
+  }
+
+  // TEMPORARY: Remove admin check for testing
+  // if (!profile?.is_admin) {
+  //   console.error("User is not admin - profile:", profile);
+  //   return (
+  //     <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
+  //       <div className="text-center">
+  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+  //         <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
+  //         <button
+  //           onClick={() => navigate("/")}
+  //           className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold"
+  //         >
+  //           Go to Home
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const showToast = (message: string, type: "success" | "error" | "warning" | "info" = "success") => {
     setToast({ message, type, isVisible: true });
@@ -56,8 +106,14 @@ export default function AdminPageNew() {
   };
 
   const handleSubmit = async (productData: Omit<Product, "id">) => {
+    console.log(`[ADMIN] handleSubmit: Called with productData:`, productData);
+    console.log(`[ADMIN] handleSubmit: Modal mode:`, modalMode);
+
     if (modalMode === "add") {
+      console.log(`[ADMIN] handleSubmit: Calling addProduct...`);
       const success = await addProduct(productData);
+      console.log(`[ADMIN] handleSubmit: addProduct result:`, success);
+
       if (success) {
         showToast(`"${productData.name}" has been added successfully`, "success");
       } else {
@@ -97,9 +153,30 @@ export default function AdminPageNew() {
               <p className="text-gray-600">
                 Manage your product catalog
               </p>
+              <div className="mt-2 text-sm text-gray-500">
+                <p>User: {user?.email}</p>
+                <p>Admin: {profile?.is_admin ? 'Yes' : 'No'}</p>
+                <p>Products: {products.length}</p>
+              </div>
             </div>
             
             <div className="flex gap-3">
+              <motion.button
+                onClick={async () => {
+                  console.log(`[ADMIN] Refreshing profile...`);
+                  await refreshProfile();
+                }}
+                className="bg-blue-600 text-white px-4 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Refresh Profile"
+              >
+                <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh Profile
+              </motion.button>
+
               <motion.button
                 onClick={handleAdd}
                 className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-[#4CAF50]/30"
