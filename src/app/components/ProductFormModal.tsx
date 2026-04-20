@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Save, Upload } from "lucide-react";
 import { Product } from "../data/products";
+import { supabase } from "../lib/supabaseClient";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -15,12 +16,12 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
   const [formData, setFormData] = useState({
     name: "",
     category: "fruits" as "fruits" | "vegetables" | "herbs",
-    price: "",
     description: "",
     image: "",
     featured: false,
     benefits: ["", "", "", ""]
   });
+  const [uploading, setUploading] = useState(false);
 
   console.log(`[MODAL] ProductFormModal render - isOpen: ${isOpen}, mode: ${mode}, product:`, product);
 
@@ -30,7 +31,6 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       const newFormData = {
         name: product.name,
         category: product.category,
-        price: product.price.toString(),
         description: product.description,
         image: product.image,
         featured: product.featured || false,
@@ -42,7 +42,6 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       const resetFormData = {
         name: "",
         category: "fruits",
-        price: "",
         description: "",
         image: "",
         featured: false,
@@ -61,7 +60,7 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
     const productData: Omit<Product, "id"> = {
       name: formData.name,
       category: formData.category,
-      price: parseFloat(formData.price),
+      price: 0.0, // Default price to 0.0
       description: formData.description,
       image: formData.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
       featured: formData.featured,
@@ -79,6 +78,46 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
     const newBenefits = [...formData.benefits];
     newBenefits[index] = value;
     setFormData({ ...formData, benefits: newBenefits });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      console.log(`[MODAL] Uploading file: ${fileName}`);
+
+      // Upload file to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error(`[MODAL] Upload error:`, error);
+        alert('Error uploading image. Please try again.');
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      console.log(`[MODAL] Upload successful, public URL: ${publicUrl}`);
+
+      // Update form data with the new image URL
+      setFormData({ ...formData, image: publicUrl });
+    } catch (err) {
+      console.error(`[MODAL] Upload exception:`, err);
+      alert('Error uploading image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -134,38 +173,21 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
                     />
                   </div>
 
-                  {/* Category and Price */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category *
-                      </label>
-                      <select
-                        required
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
-                      >
-                        <option value="fruits">Fruits</option>
-                        <option value="vegetables">Vegetables</option>
-                        <option value="herbs">Herbs</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Price ($) *
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
-                        placeholder="0.00"
-                      />
-                    </div>
+                  {/* Category */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category *
+                    </label>
+                    <select
+                      required
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                    >
+                      <option value="fruits">Fruits</option>
+                      <option value="vegetables">Vegetables</option>
+                      <option value="herbs">Herbs</option>
+                    </select>
                   </div>
 
                   {/* Description */}
@@ -183,10 +205,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
                     />
                   </div>
 
-                  {/* Image URL */}
+                  {/* Image Upload */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Image URL
+                      Product Image
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -194,16 +216,27 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
                         value={formData.image}
                         onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                         className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
-                        placeholder="https://example.com/image.jpg"
+                        placeholder="https://example.com/image.jpg or upload below"
                       />
-                      <button
-                        type="button"
-                        className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
-                      >
+                      <label className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer flex items-center">
                         <Upload className="size-5" />
-                      </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleFileUpload(file);
+                            }
+                          }}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                      </label>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">Leave empty for default image</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {uploading ? 'Uploading...' : 'Upload an image or paste a URL. Leave empty for default image.'}
+                    </p>
                   </div>
 
                   {/* Benefits */}

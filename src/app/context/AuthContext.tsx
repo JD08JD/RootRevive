@@ -43,16 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error(`[AUTH] fetchProfile error:`, error);
         setProfile(null);
+        return null;
       } else if (data) {
         console.log(`[AUTH] fetchProfile success:`, data);
         setProfile(data);
+        return data;
       } else {
         console.warn(`[AUTH] fetchProfile: No profile data found`);
         setProfile(null);
+        return null;
       }
     } catch (err) {
       console.error(`[AUTH] fetchProfile exception:`, err);
       setProfile(null);
+      return null;
     }
   };
 
@@ -102,7 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log(`[AUTH] initAuth: Session found for user:`, session.user.email);
         setUser(session.user);
         setIsAuthenticated(true);
-        await fetchProfile(session.user.id);
+        const fetchedProfile = await fetchProfile(session.user.id);
+        if (!fetchedProfile) {
+          await createProfileIfMissing(session.user);
+        }
       } else {
         console.log(`[AUTH] initAuth: No session found`);
       }
@@ -119,7 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sessionUser) {
         console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
         // Always fetch fresh profile data on auth state change
-        await fetchProfile(sessionUser.id);
+        const fetchedProfile = await fetchProfile(sessionUser.id);
+        if (!fetchedProfile) {
+          await createProfileIfMissing(sessionUser);
+        }
       } else {
         console.log(`[AUTH] onAuthStateChange: User logged out`);
         setProfile(null);

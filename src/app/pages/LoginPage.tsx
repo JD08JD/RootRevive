@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
@@ -11,7 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/admin");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +29,9 @@ export default function LoginPage() {
     console.log(`[LOGIN] handleSubmit: Login result: ${success}`);
 
     if (success) {
-      console.log(`[LOGIN] handleSubmit: Login successful, navigating to /admin`);
+      console.log(`[LOGIN] handleSubmit: Login successful, auth state will trigger navigation`);
       setIsLoading(false);
-      navigate("/admin");
+      // Navigation will be handled by useEffect when isAuthenticated becomes true
     } else {
       console.log(`[LOGIN] handleSubmit: Login failed, showing error`);
       setError("Invalid email or password");
