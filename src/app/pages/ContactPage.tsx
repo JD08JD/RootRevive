@@ -6,6 +6,11 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    contactNumber: "",
+    interestedProductName: "",
+    interestedProducts: [] as string[],
+    orderUnit: "",
+    suggestion: "",
     message: ""
   });
   const [submitted, setSubmitted] = useState(false);
@@ -16,8 +21,26 @@ export default function ContactPage() {
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
-      setFormData({ name: "", email: "", message: "" });
+      setFormData({ 
+        name: "", 
+        email: "", 
+        contactNumber: "",
+        interestedProductName: "",
+        interestedProducts: [],
+        orderUnit: "",
+        suggestion: "",
+        message: "" 
+      });
     }, 3000);
+  };
+
+  const handleCheckboxChange = (product: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interestedProducts: prev.interestedProducts.includes(product)
+        ? prev.interestedProducts.filter(p => p !== product)
+        : [...prev.interestedProducts, product]
+    }));
   };
 
   const contactInfo = [
@@ -115,16 +138,12 @@ export default function ContactPage() {
               <h3 className="font-semibold text-gray-900 mb-4">Business Hours</h3>
               <div className="space-y-2 text-gray-600">
                 <div className="flex justify-between">
-                  <span>Monday - Friday</span>
+                  <span>Monday - Saturday</span>
                   <span className="font-medium">9:00 AM - 6:00 PM</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Saturday</span>
-                  <span className="font-medium">10:00 AM - 4:00 PM</span>
-                </div>
-                <div className="flex justify-between">
                   <span>Sunday</span>
-                  <span className="font-medium">Closed</span>
+                  <span className="font-medium">10:00 AM - 2:00 PM</span>
                 </div>
               </div>
             </motion.div>
@@ -173,17 +192,95 @@ export default function ContactPage() {
                 </div>
 
                 <div>
+                  <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="contactNumber"
+                    required
+                    value={formData.contactNumber}
+                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all"
+                    placeholder="+91 9876543210"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="interestedProductName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Interested Product Name
+                  </label>
+                  <input
+                    type="text"
+                    id="interestedProductName"
+                    value={formData.interestedProductName}
+                    onChange={(e) => setFormData({ ...formData, interestedProductName: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all"
+                    placeholder="e.g., Turmeric Powder"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Interested Products
+                  </label>
+                  <div className="space-y-2">
+                    {["Powder", "Slice", "Flakes"].map((product) => (
+                      <label key={product} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.interestedProducts.includes(product)}
+                          onChange={() => handleCheckboxChange(product)}
+                          className="mr-2"
+                        />
+                        {product}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="orderUnit" className="block text-sm font-medium text-gray-700 mb-2">
+                    Order Unit
+                  </label>
+                  <select
+                    id="orderUnit"
+                    value={formData.orderUnit}
+                    onChange={(e) => setFormData({ ...formData, orderUnit: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Unit</option>
+                    <option value="Gram">Gram</option>
+                    <option value="Kg">Kg</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="suggestion" className="block text-sm font-medium text-gray-700 mb-2">
+                    Suggestion or Customize Requirement
+                  </label>
+                  <textarea
+                    id="suggestion"
+                    rows={3}
+                    value={formData.suggestion}
+                    onChange={(e) => setFormData({ ...formData, suggestion: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all resize-none"
+                    placeholder="Any specific requirements or suggestions..."
+                  />
+                </div>
+
+                <div>
                   <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                    Message
+                    Additional Message
                   </label>
                   <textarea
                     id="message"
                     required
-                    rows={5}
+                    rows={4}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all resize-none"
-                    placeholder="Tell us about your inquiry..."
+                    placeholder="Tell us more about your inquiry..."
                   />
                 </div>
 
