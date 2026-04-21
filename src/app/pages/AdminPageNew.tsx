@@ -11,6 +11,7 @@ import { Product } from "../data/products";
 export default function AdminPageNew() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info"; isVisible: boolean }>({
@@ -129,10 +130,18 @@ export default function AdminPageNew() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("Are you sure you want to logout?")) {
-      logout();
-      navigate("/login");
+      try {
+        setIsLoggingOut(true);
+        await logout();
+        // Navigate after logout is complete
+        navigate("/login");
+      } catch (err) {
+        console.error("Logout error:", err);
+        showToast("Error during logout. Please try again.", "error");
+        setIsLoggingOut(false);
+      }
     }
   };
 
@@ -189,12 +198,26 @@ export default function AdminPageNew() {
 
               <motion.button
                 onClick={handleLogout}
-                className="bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                disabled={isLoggingOut}
+                className="bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={!isLoggingOut ? { scale: 1.05 } : {}}
+                whileTap={!isLoggingOut ? { scale: 0.95 } : {}}
               >
-                <LogOut className="size-5" />
-                Logout
+                {isLoggingOut ? (
+                  <>
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                    Logging out...
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="size-5" />
+                    Logout
+                  </>
+                )}
               </motion.button>
             </div>
           </div>

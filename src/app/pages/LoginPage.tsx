@@ -156,11 +156,10 @@ export default function LoginPage() {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <motion.div
+                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Leaf className="size-5" />
-                  </motion.div>
+                  />
                   Signing in...
                 </span>
               ) : (
@@ -168,17 +167,6 @@ export default function LoginPage() {
               )}
             </motion.button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
-            <p className="text-sm text-blue-700">
-              Username: <code className="bg-blue-100 px-2 py-1 rounded">admin</code>
-            </p>
-            <p className="text-sm text-blue-700">
-              Password: <code className="bg-blue-100 px-2 py-1 rounded">admin123</code>
-            </p>
-          </div>
         </motion.div>
 
         {/* Back to Home */}

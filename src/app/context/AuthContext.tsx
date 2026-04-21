@@ -168,10 +168,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setIsAuthenticated(false);
+    try {
+      console.log(`[AUTH] logout: Starting logout...`);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error(`[AUTH] logout: Supabase signOut error:`, error);
+      }
+      
+      console.log(`[AUTH] logout: Clearing user state...`);
+      setUser(null);
+      setProfile(null);
+      setIsAuthenticated(false);
+      console.log(`[AUTH] logout: Logout completed successfully`);
+    } catch (err) {
+      console.error(`[AUTH] logout: Exception during logout:`, err);
+      // Still clear the state even if there's an error
+      setUser(null);
+      setProfile(null);
+      setIsAuthenticated(false);
+    }
   };
 
   const refreshProfile = async () => {
