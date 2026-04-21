@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { Leaf, Menu, X, Lock } from "lucide-react";
+import { Menu, X, Lock } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../context/AuthContext";
@@ -31,9 +31,9 @@ export default function Navbar() {
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.6 }}
             >
-              <Leaf className="size-8 text-[#4CAF50]" />
+              <img src="/logo.png" alt="RootRevive" className="h-14 w-auto" />
             </motion.div>
-            <span className="text-xl font-bold text-gray-900">
+            <span className="text-2xl font-bold text-gray-900 text-shadow-sm group-hover:text-[#4CAF50] transition-colors">
               RootRevive
             </span>
           </Link>

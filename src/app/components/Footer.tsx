@@ -1,4 +1,4 @@
-import { Leaf, Mail, Phone, MapPin, Lock } from "lucide-react";
+import { Mail, Phone, MapPin, Lock } from "lucide-react";
 import { Link } from "react-router";
 
 export default function Footer() {
@@ -9,7 +9,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <Leaf className="size-8 text-[#4CAF50]" />
+              <img src="/logo.png" alt="RootRevive" className="h-8 w-auto" />
               <span className="text-xl font-bold text-gray-900">
                 RootRevive
               </span>

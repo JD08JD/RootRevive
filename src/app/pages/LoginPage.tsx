@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
-import { Lock, Leaf, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -68,7 +68,7 @@ export default function LoginPage() {
             whileHover={{ rotate: 360 }}
             transition={{ duration: 0.6 }}
           >
-            <Leaf className="size-8 text-[#4CAF50]" />
+            <img src="/logo.png" alt="RootRevive" className="h-12 w-auto" />
           </motion.div>
           <h2 className="text-3xl font-bold text-gray-900">Admin Login</h2>
           <p className="mt-2 text-gray-600">Sign in to manage your products</p>
@@ -145,7 +145,6 @@ export default function LoginPage() {
                 {error}
               </motion.div>
             )}
-
             {/* Submit Button */}
             <motion.button
               type="submit"
