@@ -20,11 +20,11 @@ export default function Footer() {
             <div className="flex gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <Phone className="size-4" />
-                <span>+1 (555) 123-4567</span>
+                <span>+91 9328539766</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="size-4" />
-                <span>hello@pureharvest.com</span>
+                <span>info@rootrevive.co.in</span>
               </div>
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function Footer() {
             <ul className="space-y-2 text-gray-600">
               <li>
                 <Link to="/products?category=fruits" className="hover:text-[#4CAF50] transition-colors">
-                  Dried Fruits
+                  Dehydrated Fruits
                 </Link>
               </li>
               <li>
