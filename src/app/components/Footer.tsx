@@ -11,7 +11,7 @@ export default function Footer() {
             <div className="flex items-center gap-2 mb-4">
               <Leaf className="size-8 text-[#4CAF50]" />
               <span className="text-xl font-bold text-gray-900">
-                PureHarvest
+                RootRevive
               </span>
             </div>
             <p className="text-gray-600 mb-4">
@@ -81,7 +81,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-200 mt-8 pt-8 text-center text-sm text-gray-600">
-          <p>© 2026 PureHarvest. All rights reserved. Made with care and sustainability.</p>
+          <p>© 2026 RootRevive. All rights reserved. Made with care and sustainability.</p>
         </div>
       </div>
     </footer>

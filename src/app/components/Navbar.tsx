@@ -34,7 +34,7 @@ export default function Navbar() {
               <Leaf className="size-8 text-[#4CAF50]" />
             </motion.div>
             <span className="text-xl font-bold text-gray-900">
-              PureHarvest
+              RootRevive
             </span>
           </Link>
 

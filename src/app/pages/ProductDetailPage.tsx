@@ -181,7 +181,7 @@ export default function ProductDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="size-4" />
-                  <span>orders@pureharvest.com</span>
+                  <span>orders@rootrevive.com</span>
                 </div>
               </div>
             </motion.div>

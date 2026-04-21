@@ -73,7 +73,7 @@ export default function AboutPage() {
               </h2>
               <div className="space-y-4 text-gray-700 leading-relaxed">
                 <p>
-                  Founded in 2020, PureHarvest was born from a simple belief: nature provides the best nutrition, and it deserves to be preserved in its purest form.
+                  Founded in 2020, RootRevive was born from a simple belief: nature provides the best nutrition, and it deserves to be preserved in its purest form.
                 </p>
                 <p>
                   We work closely with organic farmers who share our commitment to sustainability and quality. Every fruit, vegetable, and herb is hand-selected at peak ripeness to ensure maximum flavor and nutritional value.
