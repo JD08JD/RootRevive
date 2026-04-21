@@ -24,19 +24,19 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: "Phone",
-      details: "+1 (555) 123-4567",
-      link: "tel:+15551234567"
+      details: "+91 9328539766",
+      link: "tel:+91 9328539766"
     },
     {
       icon: Mail,
       title: "Email",
-      details: "hello@pureharvest.com",
-      link: "mailto:hello@pureharvest.com"
+      details: "info@rootrevive.co.in",
+      link: "mailto:info@rootrevive.co.in"
     },
     {
       icon: MapPin,
       title: "Address",
-      details: "123 Organic Lane, Green Valley, CA 94000",
+      details: "1029,Nirmaalpark,Vadodara,Gujarat,India. 390010",
       link: null
     }
   ];
