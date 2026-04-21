@@ -107,7 +107,6 @@ export default function HomePage() {
               </motion.div>
             ))}
           </motion.div>
-
           <motion.div
             className="text-center"
             initial={{ opacity: 0 }}
