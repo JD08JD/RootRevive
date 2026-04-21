@@ -9,6 +9,7 @@ export default function ContactPage() {
     contactNumber: "",
     interestedProductName: "",
     interestedProducts: [] as string[],
+    quantityRequired: "",
     orderUnit: "",
     suggestion: "",
     message: ""
@@ -27,6 +28,7 @@ export default function ContactPage() {
         contactNumber: "",
         interestedProductName: "",
         interestedProducts: [],
+        quantityRequired: "",
         orderUnit: "",
         suggestion: "",
         message: "" 
@@ -237,6 +239,21 @@ export default function ContactPage() {
                       </label>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="quantityRequired" className="block text-sm font-medium text-gray-700 mb-2">
+                    How Many Products Required?
+                  </label>
+                  <input
+                    type="number"
+                    id="quantityRequired"
+                    min="1"
+                    value={formData.quantityRequired}
+                    onChange={(e) => setFormData({ ...formData, quantityRequired: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all"
+                    placeholder="Enter quantity"
+                  />
                 </div>
 
                 <div>
