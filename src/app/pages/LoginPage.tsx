@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { Lock, Eye, EyeOff } from "lucide-react";
 
@@ -176,9 +176,9 @@ export default function LoginPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <a href="/" className="text-sm text-gray-600 hover:text-[#4CAF50] transition-colors">
+          <Link to="/" className="text-sm text-gray-600 hover:text-[#4CAF50] transition-colors">
             ← Back to Homepage
-          </a>
+          </Link>
         </motion.div>
       </motion.div>
     </div>

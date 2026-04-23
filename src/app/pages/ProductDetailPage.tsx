@@ -88,12 +88,12 @@ export default function ProductDetailPage() {
               {product.name}
             </h1>
             
-            <div className="flex items-baseline gap-4 mb-6">
+            {/* <div className="flex items-baseline gap-4 mb-6">
               <span className="text-5xl font-bold text-[#4CAF50]">
                 ${product.price}
               </span>
               <span className="text-gray-500">per package</span>
-            </div>
+            </div> */}
 
             <p className="text-lg text-gray-700 mb-8">
               {product.description}

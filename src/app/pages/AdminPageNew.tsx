@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Edit, Trash2, Plus, Search, LogOut } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
@@ -21,7 +21,7 @@ export default function AdminPageNew() {
   });
 
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-  const { logout, user, profile, refreshProfile } = useAuth();
+  const { logout, user, profile, refreshProfile, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   console.log(`[ADMIN] AdminPageNew render at ${new Date().toISOString()}`);
@@ -29,29 +29,15 @@ export default function AdminPageNew() {
   console.log(`[ADMIN] AdminPageNew - profile:`, profile);
   console.log(`[ADMIN] AdminPageNew - products count:`, products.length);
 
-  // TEMPORARY: Remove admin check for testing
-  // if (!profile?.is_admin) {
-  //   console.error("User is not admin - profile:", profile);
-  //   return (
-  //     <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
-  //       <div className="text-center">
-  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-  //         <p className="text-gray-600 mb-4">You need admin privileges to access this page.</p>
-  //         <button
-  //           onClick={() => navigate("/")}
-  //           className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold"
-  //         >
-  //           Go to Home
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  // Use useEffect for navigation to avoid render-time side effects
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log("[ADMIN] Not authenticated, redirecting to login...");
+      navigate("/login");
+    }
+  }, [isAuthenticated, navigate]);
 
-  // Check if user is authenticated and is admin
-  if (!user) {
-    console.error("No user authenticated - redirecting to login");
-    navigate("/login");
+  if (!isAuthenticated || !user) {
     return null;
   }
 
@@ -135,8 +121,7 @@ export default function AdminPageNew() {
       try {
         setIsLoggingOut(true);
         await logout();
-        // Navigate after logout is complete
-        navigate("/login");
+        // Redirect is handled by the useEffect watching isAuthenticated
       } catch (err) {
         console.error("Logout error:", err);
         showToast("Error during logout. Please try again.", "error");
@@ -290,9 +275,9 @@ export default function AdminPageNew() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Category
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                  {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Price
-                  </th>
+                  </th> */}
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Status
                   </th>
@@ -334,9 +319,9 @@ export default function AdminPageNew() {
                         {product.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">
                       <span className="font-semibold text-gray-900">${product.price.toFixed(2)}</span>
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4">
                       {product.featured ? (
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

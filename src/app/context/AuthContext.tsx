@@ -28,33 +28,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   console.log(`[AUTH] AuthProvider initialized at ${new Date().toISOString()}`);
 
   const fetchProfile = async (userId: string) => {
-    console.log(`[AUTH] fetchProfile called for userId: ${userId}`);
+    console.log(`[AUTH] fetchProfile: Requesting profile for UUID: ${userId}`);
+    
     try {
-      console.log(`[AUTH] fetchProfile: Starting query...`);
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from("profiles")
         .select("id, email, display_name, is_admin")
         .eq("id", userId)
         .single();
 
-      console.log(`[AUTH] fetchProfile: Query completed, error:`, error);
-      console.log(`[AUTH] fetchProfile: Query data:`, data);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Profile fetch timeout after 15 seconds")), 15000);
+      });
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error) {
-        console.error(`[AUTH] fetchProfile error:`, error);
+        console.error(`[AUTH] fetchProfile: Supabase error:`, error.message);
         setProfile(null);
         return null;
-      } else if (data) {
-        console.log(`[AUTH] fetchProfile success:`, data);
+      } 
+      
+      if (data) {
+        console.log(`[AUTH] fetchProfile: SUCCESS! Data received:`, data);
         setProfile(data);
         return data;
-      } else {
-        console.warn(`[AUTH] fetchProfile: No profile data found`);
-        setProfile(null);
-        return null;
       }
+      
+      console.warn(`[AUTH] fetchProfile: No profile found for this user ID.`);
+      setProfile(null);
+      return null;
     } catch (err) {
-      console.error(`[AUTH] fetchProfile exception:`, err);
+      console.error(`[AUTH] fetchProfile: Error:`, err);
       setProfile(null);
       return null;
     }
@@ -168,26 +173,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    console.log(`[AUTH] logout: Starting logout process...`);
+    
+    // Clear state IMMEDIATELY for UI responsiveness
+    // This prevents "stuck loading" if signOut() hangs
+    setUser(null);
+    setProfile(null);
+    setIsAuthenticated(false);
+
     try {
-      console.log(`[AUTH] logout: Starting logout...`);
+      console.log(`[AUTH] logout: Calling supabase.auth.signOut()...`);
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error(`[AUTH] logout: Supabase signOut error:`, error);
+      } else {
+        console.log(`[AUTH] logout: Supabase signOut successful`);
       }
-      
-      console.log(`[AUTH] logout: Clearing user state...`);
-      setUser(null);
-      setProfile(null);
-      setIsAuthenticated(false);
-      console.log(`[AUTH] logout: Logout completed successfully`);
     } catch (err) {
-      console.error(`[AUTH] logout: Exception during logout:`, err);
-      // Still clear the state even if there's an error
-      setUser(null);
-      setProfile(null);
-      setIsAuthenticated(false);
+      console.error(`[AUTH] logout: Exception during Supabase signOut:`, err);
     }
+    
+    console.log(`[AUTH] logout: Logout process completed`);
   };
 
   const refreshProfile = async () => {

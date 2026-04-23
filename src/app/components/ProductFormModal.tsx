@@ -12,6 +12,7 @@ interface ProductFormModalProps {
   mode: "add" | "edit";
 }
 
+// Updated to force HMR refresh
 export default function ProductFormModal({ isOpen, onClose, onSubmit, product, mode }: ProductFormModalProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -83,39 +84,65 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
   const handleFileUpload = async (file: File) => {
     if (!file) return;
 
+    console.log(`[MODAL] handleFileUpload: Starting for file: ${file.name} (${file.size} bytes)`);
+
+    // Check session before starting
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error("[MODAL] No active session found");
+      alert("Your session has expired. Please log in again.");
+      return;
+    }
+
     setUploading(true);
+    
     try {
       // Create a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
-      console.log(`[MODAL] Uploading file: ${fileName}`);
+      console.log(`[MODAL] handleFileUpload: Prepared path: ${filePath}`);
 
-      // Upload file to Supabase storage
-      const { data, error } = await supabase.storage
+      // Upload file to Supabase storage with timeout
+      const uploadPromise = supabase.storage
         .from('product-images')
         .upload(filePath, file);
 
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
+      });
+
+      console.log(`[MODAL] handleFileUpload: Calling supabase.storage.upload...`);
+      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any;
+      console.log(`[MODAL] handleFileUpload: Upload promise resolved`);
+
       if (error) {
         console.error(`[MODAL] Upload error:`, error);
-        alert('Error uploading image. Please try again.');
+        alert(`Error uploading image: ${error.message} (Code: ${error.statusCode || 'N/A'}). Ensure 'product-images' bucket exists and is Public.`);
         return;
       }
 
+      console.log(`[MODAL] handleFileUpload: Success data:`, data);
+
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('product-images')
         .getPublicUrl(filePath);
 
-      console.log(`[MODAL] Upload successful, public URL: ${publicUrl}`);
+      const publicUrl = urlData.publicUrl;
+      console.log(`[MODAL] handleFileUpload: Public URL generated: ${publicUrl}`);
 
       // Update form data with the new image URL
       setFormData({ ...formData, image: publicUrl });
+      console.log(`[MODAL] handleFileUpload: Form state updated with new image URL`);
+      
     } catch (err) {
-      console.error(`[MODAL] Upload exception:`, err);
-      alert('Error uploading image. Please try again.');
+      console.error(`[MODAL] handleFileUpload: Exception:`, err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(`Upload failed: ${message}`);
     } finally {
+      console.log(`[MODAL] handleFileUpload: Cleaning up (setting uploading to false)`);
       setUploading(false);
     }
   };
