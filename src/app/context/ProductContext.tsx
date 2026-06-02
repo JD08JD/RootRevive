@@ -35,16 +35,10 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     console.log(`[PRODUCT] refreshProducts: Starting...`);
     setLoading(true);
     try {
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from("products")
         .select("*")
         .order("created_at", { ascending: false });
-
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Products fetch timeout after 15 seconds")), 15000);
-      });
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error(`[PRODUCT] refreshProducts: Supabase error:`, error.message);

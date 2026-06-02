@@ -97,20 +97,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const restoreSession = async () => {
+    try {
+      for (let attempt = 1; attempt <= 5; attempt += 1) {
+        const { data } = await supabase.auth.getSession();
+        const activeSession = data.session;
+
+        if (activeSession?.user) {
+          return activeSession.user;
+        }
+
+        if (attempt === 1) {
+          console.log(`[AUTH] restoreSession: No active session, attempting refreshSession...`);
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.warn(`[AUTH] restoreSession: refreshSession failed:`, refreshError.message);
+          } else {
+            const refreshedUser = refreshData.session?.user || null;
+            if (refreshedUser) {
+              console.log(`[AUTH] restoreSession: Refreshed session user:`, refreshedUser.email);
+              return refreshedUser;
+            }
+          }
+        }
+
+        if (attempt < 5) {
+          console.log(`[AUTH] restoreSession: Session missing, retrying after delay (attempt ${attempt})...`);
+          await sleep(400);
+        }
+      }
+
+      console.log(`[AUTH] restoreSession: No session restored after retries`);
+      return null;
+    } catch (err) {
+      console.error(`[AUTH] restoreSession: Error:`, err);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       console.log(`[AUTH] initAuth: Checking session...`);
       try {
-        const { data } = await supabase.auth.getSession();
-        const session = data.session;
+        const sessionUser = await restoreSession();
 
-        if (session?.user) {
-          console.log(`[AUTH] initAuth: Session found for user:`, session.user.email);
-          setUser(session.user);
+        if (sessionUser) {
+          console.log(`[AUTH] initAuth: Session found for user:`, sessionUser.email);
+          setUser(sessionUser);
           setIsAuthenticated(true);
-          const fetchedProfile = await fetchProfile(session.user.id);
+          const fetchedProfile = await fetchProfile(sessionUser.id);
           if (!fetchedProfile) {
-            await createProfileIfMissing(session.user);
+            await createProfileIfMissing(sessionUser);
           }
         } else {
           console.log(`[AUTH] initAuth: No session found`);
@@ -132,10 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let sessionUser = session?.user || null;
 
         if (!sessionUser) {
-          console.log(`[AUTH] onAuthStateChange: No session in event, verifying current session...`);
-          const { data: currentSessionData } = await supabase.auth.getSession();
-          sessionUser = currentSessionData.session?.user || null;
-          console.log(`[AUTH] onAuthStateChange: Current session after verification:`, !!sessionUser);
+          console.log(`[AUTH] onAuthStateChange: No session in event, trying restoreSession...`);
+          sessionUser = await restoreSession();
         }
 
         setUser(sessionUser);
@@ -160,8 +197,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    const handleVisibilityChange = async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        console.log(`[AUTH] visibilitychange: tab visible, restoring session...`);
+        const sessionUser = await restoreSession();
+        if (sessionUser) {
+          setUser(sessionUser);
+          setIsAuthenticated(true);
+          await fetchProfile(sessionUser.id);
+        }
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       listener.subscription?.unsubscribe();
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

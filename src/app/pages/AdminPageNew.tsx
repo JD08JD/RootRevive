@@ -38,7 +38,7 @@ export default function AdminPageNew() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  if (isLoading) {
+  if (isLoading && !user) {
     return <LoadingSpinner />;
   }
 
