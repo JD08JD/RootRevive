@@ -33,30 +33,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log(`[AUTH] fetchProfile: Requesting profile for UUID: ${userId}`);
     
     try {
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("id, email, display_name, is_admin")
         .eq("id", userId)
         .single();
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Profile fetch timeout after 15 seconds")), 15000);
-      });
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
-
       if (error) {
         console.error(`[AUTH] fetchProfile: Supabase error:`, error.message);
         setProfile(null);
         return null;
-      } 
-      
+      }
+
       if (data) {
         console.log(`[AUTH] fetchProfile: SUCCESS! Data received:`, data);
         setProfile(data);
         return data;
       }
-      
+
       console.warn(`[AUTH] fetchProfile: No profile found for this user ID.`);
       setProfile(null);
       return null;
@@ -106,22 +100,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       console.log(`[AUTH] initAuth: Checking session...`);
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
 
-      if (session?.user) {
-        console.log(`[AUTH] initAuth: Session found for user:`, session.user.email);
-        setUser(session.user);
-        setIsAuthenticated(true);
-        const fetchedProfile = await fetchProfile(session.user.id);
-        if (!fetchedProfile) {
-          await createProfileIfMissing(session.user);
+        if (session?.user) {
+          console.log(`[AUTH] initAuth: Session found for user:`, session.user.email);
+          setUser(session.user);
+          setIsAuthenticated(true);
+          const fetchedProfile = await fetchProfile(session.user.id);
+          if (!fetchedProfile) {
+            await createProfileIfMissing(session.user);
+          }
+        } else {
+          console.log(`[AUTH] initAuth: No session found`);
         }
-      } else {
-        console.log(`[AUTH] initAuth: No session found`);
+      } catch (err) {
+        console.error(`[AUTH] initAuth: Error during auth initialization:`, err);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     initAuth();
@@ -133,19 +131,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(Boolean(sessionUser));
       setIsLoading(true);
 
-      if (sessionUser) {
-        console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
-        // Always fetch fresh profile data on auth state change
-        const fetchedProfile = await fetchProfile(sessionUser.id);
-        if (!fetchedProfile) {
-          await createProfileIfMissing(sessionUser);
+      try {
+        if (sessionUser) {
+          console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
+          // Always fetch fresh profile data on auth state change
+          const fetchedProfile = await fetchProfile(sessionUser.id);
+          if (!fetchedProfile) {
+            await createProfileIfMissing(sessionUser);
+          }
+        } else {
+          console.log(`[AUTH] onAuthStateChange: User logged out`);
+          setProfile(null);
         }
-      } else {
-        console.log(`[AUTH] onAuthStateChange: User logged out`);
-        setProfile(null);
+      } catch (err) {
+        console.error(`[AUTH] onAuthStateChange: Error handling auth state change:`, err);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     });
 
     return () => {
