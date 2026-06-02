@@ -1,5 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
+const browserCrypto = (globalThis as any).crypto;
+if (browserCrypto && typeof browserCrypto.getRandomValues !== "function") {
+  if (typeof browserCrypto.randomBytes === "function") {
+    browserCrypto.getRandomValues = (array: Uint8Array) => {
+      const bytes = browserCrypto.randomBytes(array.length);
+      array.set(bytes);
+      return array;
+    };
+    console.warn("[SUPABASE] Patched crypto.getRandomValues using randomBytes fallback.");
+  }
+}
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
