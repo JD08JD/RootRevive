@@ -174,14 +174,14 @@ export default function ProductDetailPage() {
                 </motion.button>
               </Link>
               
-              <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center justify-center gap-6 text-sm mt-8 text-gray-600">
                 <div className="flex items-center gap-2">
                   <Phone className="size-4" />
-                  <span>+1 (555) 123-4567</span>
+                  <span>+919328539766</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="size-4" />
-                  <span>orders@rootrevive.com</span>
+                  <span>info@rootrevive.co.in</span>
                 </div>
               </div>
             </motion.div>
