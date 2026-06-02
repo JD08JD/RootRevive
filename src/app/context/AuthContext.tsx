@@ -13,6 +13,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   console.log(`[AUTH] AuthProvider initialized at ${new Date().toISOString()}`);
 
@@ -118,6 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log(`[AUTH] initAuth: No session found`);
       }
+
+      setIsLoading(false);
     };
 
     initAuth();
@@ -127,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sessionUser = session?.user || null;
       setUser(sessionUser);
       setIsAuthenticated(Boolean(sessionUser));
+      setIsLoading(true);
 
       if (sessionUser) {
         console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
@@ -139,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log(`[AUTH] onAuthStateChange: User logged out`);
         setProfile(null);
       }
+
+      setIsLoading(false);
     });
 
     return () => {
@@ -205,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isAuthenticated, login, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, isAuthenticated, isLoading, login, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

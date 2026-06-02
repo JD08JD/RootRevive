@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import ProductFormModal from "../components/ProductFormModal";
 import Toast from "../components/Toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { Product } from "../data/products";
 
 export default function AdminPageNew() {
@@ -21,7 +22,7 @@ export default function AdminPageNew() {
   });
 
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-  const { logout, user, profile, refreshProfile, isAuthenticated } = useAuth();
+  const { logout, user, profile, refreshProfile, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   console.log(`[ADMIN] AdminPageNew render at ${new Date().toISOString()}`);
@@ -31,11 +32,15 @@ export default function AdminPageNew() {
 
   // Use useEffect for navigation to avoid render-time side effects
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       console.log("[ADMIN] Not authenticated, redirecting to login...");
       navigate("/login");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   if (!isAuthenticated || !user) {
     return null;
@@ -149,7 +154,7 @@ export default function AdminPageNew() {
               </p>
               <div className="mt-2 text-sm text-gray-500">
                 <p>User: {user?.email}</p>
-                <p>Admin: {profile?.is_admin ? 'Yes' : 'No'}</p>
+                <p>Admin: {profile ? (profile.is_admin ? 'Yes' : 'No') : 'Loading...'}</p>
                 <p>Products: {products.length}</p>
               </div>
             </div>
