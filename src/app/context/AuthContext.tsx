@@ -126,22 +126,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log(`[AUTH] onAuthStateChange: Event=${_event}, Session=${!!session}`);
-      const sessionUser = session?.user || null;
-      setUser(sessionUser);
-      setIsAuthenticated(Boolean(sessionUser));
       setIsLoading(true);
 
       try {
+        let sessionUser = session?.user || null;
+
+        if (!sessionUser) {
+          console.log(`[AUTH] onAuthStateChange: No session in event, verifying current session...`);
+          const { data: currentSessionData } = await supabase.auth.getSession();
+          sessionUser = currentSessionData.session?.user || null;
+          console.log(`[AUTH] onAuthStateChange: Current session after verification:`, !!sessionUser);
+        }
+
+        setUser(sessionUser);
+        setIsAuthenticated(Boolean(sessionUser));
+
         if (sessionUser) {
           console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
-          // Always fetch fresh profile data on auth state change
           const fetchedProfile = await fetchProfile(sessionUser.id);
           if (!fetchedProfile) {
             await createProfileIfMissing(sessionUser);
           }
-        } else {
-          console.log(`[AUTH] onAuthStateChange: User logged out`);
+        } else if (_event === "SIGNED_OUT" || _event === "USER_DELETED") {
+          console.log(`[AUTH] onAuthStateChange: User logged out or deleted`);
           setProfile(null);
+        } else {
+          console.log(`[AUTH] onAuthStateChange: Session event without user, no profile change made`);
         }
       } catch (err) {
         console.error(`[AUTH] onAuthStateChange: Error handling auth state change:`, err);
