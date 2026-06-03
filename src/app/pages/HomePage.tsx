@@ -137,7 +137,6 @@ export default function HomePage() {
           >
             Shop by Category
           </motion.h2>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {

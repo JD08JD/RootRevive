@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -14,26 +15,55 @@ export default function ContactPage() {
     suggestion: "",
     message: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate form submission
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({ 
-        name: "", 
-        email: "", 
-        contactNumber: "",
-        interestedProductName: "",
-        interestedProducts: [],
-        quantityRequired: "",
-        orderUnit: "",
-        suggestion: "",
-        message: "" 
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          interestedProducts: formData.interestedProducts.join(", "),
+          timestamp: new Date().toLocaleString()
+        }),
       });
-    }, 3000);
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmitted(true);
+        toast.success("Message sent successfully!");
+        setFormData({ 
+          name: "", 
+          email: "", 
+          contactNumber: "",
+          interestedProductName: "",
+          interestedProducts: [],
+          quantityRequired: "",
+          orderUnit: "",
+          suggestion: "",
+          message: "" 
+        });
+        setTimeout(() => setSubmitted(false), 5000);
+      } else {
+        const errorMessage = result.rawResponse 
+          ? `Server Error: ${result.rawResponse}...` 
+          : (result.error || "Failed to send message");
+        throw new Error(errorMessage);
+      }
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      toast.error(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCheckboxChange = (product: string) => {
@@ -303,16 +333,21 @@ export default function ContactPage() {
 
                 <motion.button
                   type="submit"
-                  className="w-full bg-[#4CAF50] text-white py-4 rounded-xl font-semibold shadow-lg shadow-[#4CAF50]/30 flex items-center justify-center gap-2"
+                  className="w-full bg-[#4CAF50] text-white py-4 rounded-xl font-semibold shadow-lg shadow-[#4CAF50]/30 flex items-center justify-center gap-2 disabled:opacity-70"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  disabled={submitted}
+                  disabled={isSubmitting || submitted}
                 >
-                  {submitted ? (
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin" />
+                      Sending...
+                    </>
+                  ) : submitted ? (
                     <>
                       <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.5 }}
                       >
                         ✓
                       </motion.div>
