@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { X, Save, Upload } from "lucide-react";
 import { Product } from "../data/products";
 import { supabase } from "../lib/supabaseClient";
+import { useCategories } from "../context/CategoryContext";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -14,9 +15,10 @@ interface ProductFormModalProps {
 
 // Updated to force HMR refresh
 export default function ProductFormModal({ isOpen, onClose, onSubmit, product, mode }: ProductFormModalProps) {
+  const { categories } = useCategories();
   const [formData, setFormData] = useState({
     name: "",
-    category: "fruits" as "fruits" | "vegetables" | "herbs",
+    category: "",
     description: "",
     image: "",
     featured: false,
@@ -42,7 +44,7 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
     } else {
       const resetFormData = {
         name: "",
-        category: "fruits",
+        category: categories.length > 0 ? categories[0].slug : "",
         description: "",
         image: "",
         featured: false,
@@ -51,7 +53,7 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       console.log(`[MODAL] Resetting form for add mode:`, resetFormData);
       setFormData(resetFormData);
     }
-  }, [product, mode, isOpen]);
+  }, [product, mode, isOpen, categories]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,12 +210,14 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
                     <select
                       required
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
                     >
-                      <option value="fruits">Fruits</option>
-                      <option value="vegetables">Vegetables</option>
-                      <option value="herbs">Herbs</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.slug}>
+                          {category.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

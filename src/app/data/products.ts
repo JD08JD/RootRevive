@@ -1,7 +1,7 @@
 export interface Product {
   id: string;
   name: string;
-  category: "fruits" | "vegetables" | "herbs";
+  category: string;
   price: number;
   description: string;
   benefits: string[];

@@ -1,26 +1,37 @@
 import { motion } from "motion/react";
-import { Apple, Carrot, Leaf } from "lucide-react";
+import { Apple, Carrot, Leaf, ShoppingBag, Zap, Heart, Star } from "lucide-react";
+import { useCategories } from "../context/CategoryContext";
 
 interface FilterBarProps {
   activeCategory: string | null;
   onCategoryChange: (category: string | null) => void;
 }
 
+const iconMap: Record<string, any> = {
+  Apple,
+  Carrot,
+  Leaf,
+  ShoppingBag,
+  Zap,
+  Heart,
+  Star
+};
+
 export default function FilterBar({ activeCategory, onCategoryChange }: FilterBarProps) {
-  const categories = [
-    { id: null, name: "All Products", icon: Leaf },
-    { id: "fruits", name: "Fruits", icon: Apple },
-    { id: "vegetables", name: "Vegetables", icon: Carrot },
-    { id: "herbs", name: "Herbs", icon: Leaf },
+  const { categories } = useCategories();
+  
+  const allCategories = [
+    { id: null, name: "All Products", icon: "Leaf" },
+    ...categories.map(c => ({ id: c.slug, name: c.name, icon: c.icon }))
   ];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter by Category</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {categories.map((category) => {
+        {allCategories.map((category) => {
           const isActive = activeCategory === category.id;
-          const Icon = category.icon;
+          const Icon = iconMap[category.icon] || Leaf;
 
           return (
             <motion.button

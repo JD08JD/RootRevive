@@ -3,10 +3,12 @@ import { Link } from "react-router";
 import Hero from "../components/Hero";
 import ProductCard from "../components/ProductCard";
 import { useProducts } from "../context/ProductContext";
+import { useCategories } from "../context/CategoryContext";
 import { Leaf, Truck, Award, Heart } from "lucide-react";
 
 export default function HomePage() {
   const { products } = useProducts();
+  const { categories, loading: categoriesLoading } = useCategories();
   const featuredProducts = products.filter(p => p.featured);
 
   const features = [
@@ -138,27 +140,8 @@ export default function HomePage() {
             Shop by Category
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Dried Fruits",
-                category: "fruits",
-                image: "https://images.unsplash.com/photo-1776188590471-db74f543cf52?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkcmllZCUyMGZydWl0cyUyMGFzc29ydG1lbnQlMjBuYXR1cmFsfGVufDF8fHx8MTc3NjI0NTE1MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                color: "#FFA726"
-              },
-              {
-                name: "Dehydrated Vegetables",
-                category: "vegetables",
-                image: "https://images.unsplash.com/photo-1646827153974-acb5bc2393b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZWh5ZHJhdGVkJTIwdmVnZXRhYmxlcyUyMGhlYWx0aHl8ZW58MXx8fHwxNzc2MjQ1MTUyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                color: "#4CAF50"
-              },
-              {
-                name: "Herbal Products",
-                category: "herbs",
-                image: "https://images.unsplash.com/photo-1757802412806-433e4e60eec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZXJiYWwlMjB0ZWElMjBvcmdhbmljJTIwbGVhdmVzfGVufDF8fHx8MTc3NjI0NTE1Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                color: "#8BC34A"
-              }
-            ].map((category, index) => (
-              <Link key={category.category} to={`/products?category=${category.category}`}>
+            {!categoriesLoading && categories.map((category, index) => (
+              <Link key={category.slug} to={`/products?category=${category.slug}`}>
                 <motion.div
                   className="relative rounded-2xl overflow-hidden group cursor-pointer h-80"
                   initial={{ opacity: 0, y: 30 }}
@@ -173,7 +156,7 @@ export default function HomePage() {
                     transition={{ duration: 0.4 }}
                   >
                     <img
-                      src={category.image}
+                      src={category.image_url}
                       alt={category.name}
                       className="w-full h-full object-cover"
                     />

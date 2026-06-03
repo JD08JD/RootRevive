@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Edit, Trash2, Plus, Search, LogOut } from "lucide-react";
+import { Edit, Trash2, Plus, Search, LogOut, Settings, Package } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
+import { useCategories, Category } from "../context/CategoryContext";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import ProductFormModal from "../components/ProductFormModal";
+import CategoryFormModal from "../components/CategoryFormModal";
 import Toast from "../components/Toast";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { Product } from "../data/products";
 
 export default function AdminPageNew() {
+  const [activeTab, setActiveTab] = useState<"products" | "categories">("products");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [productModalMode, setProductModalMode] = useState<"add" | "edit">("add");
+  const [categoryModalMode, setCategoryModalMode] = useState<"add" | "edit">("add");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info"; isVisible: boolean }>({
     message: "",
     type: "success",
@@ -22,6 +28,7 @@ export default function AdminPageNew() {
   });
 
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
   const { logout, user, profile, refreshProfile, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -70,17 +77,23 @@ export default function AdminPageNew() {
   };
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.category || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (product: Product) => {
+  const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
-    setModalMode("edit");
-    setIsModalOpen(true);
+    setProductModalMode("edit");
+    setIsProductModalOpen(true);
   };
 
-  const handleDelete = async (product: Product) => {
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryModalMode("edit");
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
     if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
       const success = await deleteProduct(product.id);
       if (success) {
@@ -91,21 +104,38 @@ export default function AdminPageNew() {
     }
   };
 
-  const handleAdd = () => {
-    setEditingProduct(null);
-    setModalMode("add");
-    setIsModalOpen(true);
+  const handleDeleteCategory = async (category: Category) => {
+    const productsInCategory = products.filter(p => p.category === category.slug);
+    if (productsInCategory.length > 0) {
+      alert(`Cannot delete category "${category.name}" because it contains ${productsInCategory.length} products. Move or delete those products first.`);
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete category "${category.name}"?`)) {
+      const success = await deleteCategory(category.id);
+      if (success) {
+        showToast(`Category "${category.name}" has been deleted`, "success");
+      } else {
+        showToast(`Unable to delete category "${category.name}".`, "error");
+      }
+    }
   };
 
-  const handleSubmit = async (productData: Omit<Product, "id">) => {
-    console.log(`[ADMIN] handleSubmit: Called with productData:`, productData);
-    console.log(`[ADMIN] handleSubmit: Modal mode:`, modalMode);
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setProductModalMode("add");
+    setIsProductModalOpen(true);
+  };
 
-    if (modalMode === "add") {
-      console.log(`[ADMIN] handleSubmit: Calling addProduct...`);
+  const handleAddCategory = () => {
+    setEditingCategory(null);
+    setCategoryModalMode("add");
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleProductSubmit = async (productData: Omit<Product, "id">) => {
+    if (productModalMode === "add") {
       const success = await addProduct(productData);
-      console.log(`[ADMIN] handleSubmit: addProduct result:`, success);
-
       if (success) {
         showToast(`"${productData.name}" has been added successfully`, "success");
       } else {
@@ -117,6 +147,24 @@ export default function AdminPageNew() {
         showToast(`"${productData.name}" has been updated successfully`, "success");
       } else {
         showToast(`Unable to update "${productData.name}".`, "error");
+      }
+    }
+  };
+
+  const handleCategorySubmit = async (categoryData: Omit<Category, "id">) => {
+    if (categoryModalMode === "add") {
+      const success = await addCategory(categoryData);
+      if (success) {
+        showToast(`Category "${categoryData.name}" has been added`, "success");
+      } else {
+        showToast(`Unable to add category "${categoryData.name}".`, "error");
+      }
+    } else if (editingCategory) {
+      const success = await updateCategory(editingCategory.id, categoryData);
+      if (success) {
+        showToast(`Category "${categoryData.name}" has been updated`, "success");
+      } else {
+        showToast(`Unable to update category "${categoryData.name}".`, "error");
       }
     }
   };
@@ -177,16 +225,6 @@ export default function AdminPageNew() {
               </motion.button>
 
               <motion.button
-                onClick={handleAdd}
-                className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-[#4CAF50]/30"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Plus className="size-5" />
-                Add Product
-              </motion.button>
-
-              <motion.button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
                 className="bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
@@ -213,24 +251,50 @@ export default function AdminPageNew() {
           </div>
         </motion.div>
 
-        {/* Search */}
-        <motion.div
-          className="mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="relative">
+        {/* Tabs & Search */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div className="flex p-1 bg-white rounded-xl shadow-sm border border-gray-100 w-fit">
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "products" ? "bg-[#4CAF50] text-white shadow-md" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Package className="size-4" />
+              Products
+            </button>
+            <button
+              onClick={() => setActiveTab("categories")}
+              className={`px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "categories" ? "bg-[#4CAF50] text-white shadow-md" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Settings className="size-4" />
+              Categories
+            </button>
+          </div>
+
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search products by name or category..."
+              placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
             />
           </div>
-        </motion.div>
+
+          <motion.button
+            onClick={activeTab === "products" ? handleAddProduct : handleAddCategory}
+            className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#4CAF50]/30"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Plus className="size-5" />
+            Add {activeTab === "products" ? "Product" : "Category"}
+          </motion.button>
+        </div>
 
         {/* Stats */}
         <motion.div
@@ -239,151 +303,148 @@ export default function AdminPageNew() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="text-sm text-gray-600 mb-1">Total Products</div>
             <div className="text-3xl font-bold text-gray-900">{products.length}</div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="text-sm text-gray-600 mb-1">Fruits</div>
-            <div className="text-3xl font-bold text-[#FFA726]">
-              {products.filter(p => p.category === 'fruits').length}
+          {categories.slice(0, 3).map((category, idx) => (
+            <div key={category.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="text-sm text-gray-600 mb-1">{category.name}</div>
+              <div className="text-3xl font-bold" style={{ color: category.color }}>
+                {products.filter(p => p.category === category.slug).length}
+              </div>
             </div>
-          </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="text-sm text-gray-600 mb-1">Vegetables</div>
-            <div className="text-3xl font-bold text-[#4CAF50]">
-              {products.filter(p => p.category === 'vegetables').length}
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <div className="text-sm text-gray-600 mb-1">Herbs</div>
-            <div className="text-3xl font-bold text-[#8BC34A]">
-              {products.filter(p => p.category === 'herbs').length}
-            </div>
-          </div>
+          ))}
         </motion.div>
 
-        {/* Products Table */}
+        {/* Content Table */}
         <motion.div
-          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+          className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Product
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Category
-                  </th>
-                  {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Price
-                  </th> */}
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredProducts.map((product, index) => (
-                  <motion.tr
-                    key={product.id}
-                    className="hover:bg-gray-50 transition-colors"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="size-12 rounded-lg object-cover"
-                        />
-                        <div>
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500 line-clamp-1 max-w-xs">
-                            {product.description}
+          {activeTab === "products" ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Category</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredProducts.map((product, index) => (
+                    <motion.tr
+                      key={product.id}
+                      className="hover:bg-gray-50 transition-colors"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <img src={product.image} alt={product.name} className="size-12 rounded-lg object-cover" />
+                          <div>
+                            <div className="font-medium text-gray-900">{product.name}</div>
+                            <div className="text-sm text-gray-500 line-clamp-1 max-w-xs">{product.description}</div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                        product.category === 'fruits' ? 'bg-orange-100 text-orange-800' :
-                        product.category === 'vegetables' ? 'bg-green-100 text-green-800' :
-                        'bg-lime-100 text-lime-800'
-                      }`}>
-                        {product.category}
-                      </span>
-                    </td>
-                    {/* <td className="px-6 py-4">
-                      <span className="font-semibold text-gray-900">${product.price.toFixed(2)}</span>
-                    </td> */}
-                    <td className="px-6 py-4">
-                      {product.featured ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Featured
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                          {product.category}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Standard
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <motion.button
-                          onClick={() => handleEdit(product)}
-                          className="p-2 text-gray-600 hover:text-[#4CAF50] hover:bg-green-50 rounded-lg transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          title="Edit product"
-                        >
-                          <Edit className="size-4" />
-                        </motion.button>
-                        <motion.button
-                          onClick={() => handleDelete(product)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          title="Delete product"
-                        >
-                          <Trash2 className="size-4" />
-                        </motion.button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-lg mb-2">No products found</p>
-              <p className="text-sm">
-                {searchTerm ? "Try adjusting your search" : "Click 'Add Product' to get started"}
-              </p>
+                      </td>
+                      <td className="px-6 py-4">
+                        {product.featured ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Featured</span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Standard</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => handleEditProduct(product)} className="p-2 text-gray-600 hover:text-[#4CAF50] hover:bg-green-50 rounded-lg transition-colors">
+                            <Edit className="size-4" />
+                          </button>
+                          <button onClick={() => handleDeleteProduct(product)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredProducts.length === 0 && <div className="p-12 text-center text-gray-500">No products found</div>}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Category</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Slug</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Order</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((category, index) => (
+                    <motion.tr
+                      key={category.id}
+                      className="hover:bg-gray-50 transition-colors"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: category.color }}>
+                            <Settings className="size-5" />
+                          </div>
+                          <div className="font-medium text-gray-900">{category.name}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{category.slug}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{category.display_order}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => handleEditCategory(category)} className="p-2 text-gray-600 hover:text-[#4CAF50] hover:bg-green-50 rounded-lg transition-colors">
+                            <Edit className="size-4" />
+                          </button>
+                          <button onClick={() => handleDeleteCategory(category)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </motion.div>
       </div>
 
-      {/* Product Form Modal */}
+      {/* Modals */}
       <ProductFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmit}
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSubmit={handleProductSubmit}
         product={editingProduct}
-        mode={modalMode}
+        mode={productModalMode}
+      />
+
+      <CategoryFormModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onSubmit={handleCategorySubmit}
+        category={editingCategory}
+        mode={categoryModalMode}
       />
 
       {/* Toast */}

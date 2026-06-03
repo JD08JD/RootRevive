@@ -1,14 +1,15 @@
 import { useParams, Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Check, Leaf, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Check, Leaf, Mail, Phone, ChevronDown } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
+import { useCategories } from "../context/CategoryContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import * as Accordion from "@radix-ui/react-accordion";
-import { ChevronDown } from "lucide-react";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
   const { products } = useProducts();
+  const { categories } = useCategories();
   const product = products.find(p => p.id === id);
 
   if (!product) {
@@ -25,6 +26,9 @@ export default function ProductDetailPage() {
       </div>
     );
   }
+
+  const categoryData = categories.find(c => c.slug === product.category);
+  const categoryColor = categoryData?.color || '#4CAF50';
 
   return (
     <div className="min-h-screen bg-[#F9F7F2] py-12">
@@ -67,12 +71,11 @@ export default function ProductDetailPage() {
               
               {/* Category Badge */}
               <div className="absolute top-6 right-6">
-                <span className={`px-4 py-2 rounded-full text-sm font-medium text-white backdrop-blur-sm ${
-                  product.category === 'fruits' ? 'bg-[#FFA726]/90' :
-                  product.category === 'vegetables' ? 'bg-[#4CAF50]/90' :
-                  'bg-[#8BC34A]/90'
-                }`}>
-                  {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                <span 
+                  className="px-4 py-2 rounded-full text-sm font-medium text-white backdrop-blur-sm shadow-lg"
+                  style={{ backgroundColor: `${categoryColor}E6` }} // E6 adds 90% opacity
+                >
+                  {categoryData?.name || (product.category ? product.category.charAt(0).toUpperCase() + product.category.slice(1) : 'Uncategorized')}
                 </span>
               </div>
             </motion.div>
