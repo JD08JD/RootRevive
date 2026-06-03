@@ -5,10 +5,14 @@ import { useAuth } from "./AuthContext";
 
 interface ProductContextType {
   products: Product[];
+  customAutocompleteNames: string[];
   loading: boolean;
   addProduct: (product: Omit<Product, "id">) => Promise<boolean>;
   updateProduct: (id: string, product: Omit<Product, "id">) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<boolean>;
+  addCustomAutocompleteName: (name: string) => Promise<boolean>;
+  deleteCustomAutocompleteName: (name: string) => Promise<boolean>;
+  refreshCustomAutocompleteNames: () => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -21,7 +25,7 @@ const mapProductRow = (row: any): Product => ({
   description: row.description,
   benefits: row.benefits || [],
   image: row.image_url || row.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
-  featured: row.featured || false,
+  featured: !!row.featured,
   storage_instructions: row.storage_instructions,
   nutritional_info: row.nutritional_info,
   sourcing_info: row.sourcing_info,
@@ -29,10 +33,21 @@ const mapProductRow = (row: any): Product => ({
 
 export function ProductProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [customAutocompleteNames, setCustomAutocompleteNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
   console.log(`[PRODUCT] ProductProvider initialized at ${new Date().toISOString()}`);
+
+  const refreshCustomAutocompleteNames = async () => {
+    try {
+      const { data, error } = await supabase.from("custom_autocomplete").select("name").order("name");
+      if (error) throw error;
+      if (data) setCustomAutocompleteNames(data.map(d => d.name));
+    } catch (err) {
+      console.error("Error fetching custom autocomplete names:", err);
+    }
+  };
 
   const refreshProducts = async () => {
     console.log(`[PRODUCT] refreshProducts: Starting...`);
@@ -59,7 +74,44 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshProducts();
+    refreshCustomAutocompleteNames();
   }, []);
+
+  const addCustomAutocompleteName = async (name: string) => {
+    console.log(`[QUICK-NAME] addCustomAutocompleteName: Adding "${name}"`);
+    try {
+      const { data, error } = await supabase.from("custom_autocomplete").insert({ name });
+      
+      if (error) {
+        if (error.code === '23505') { // Postgres error for unique violation
+          console.warn("[QUICK-NAME] Name already exists");
+          alert(`"${name}" is already in the list.`);
+          return false;
+        }
+        console.error("[QUICK-NAME] Error details:", error);
+        throw error;
+      }
+      
+      console.log("[QUICK-NAME] Successfully added name, refreshing list...");
+      await refreshCustomAutocompleteNames();
+      return true;
+    } catch (err) {
+      console.error("[QUICK-NAME] Exception adding name:", err);
+      return false;
+    }
+  };
+
+  const deleteCustomAutocompleteName = async (name: string) => {
+    try {
+      const { error } = await supabase.from("custom_autocomplete").delete().eq("name", name);
+      if (error) throw error;
+      await refreshCustomAutocompleteNames();
+      return true;
+    } catch (err) {
+      console.error("Error deleting custom autocomplete name:", err);
+      return false;
+    }
+  };
 
   const addProduct = async (productData: Omit<Product, "id">) => {
     console.log(`[PRODUCT] addProduct: Called with data:`, productData);
@@ -97,6 +149,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         created_by: user.id,
       });
 
+      console.log(`[PRODUCT] addProduct: Insert data with featured:`, !!productData.featured);
+
       const insertPromise = supabase.from("products").insert({
         name: productData.name,
         category: productData.category,
@@ -104,7 +158,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         description: productData.description,
         image_url: productData.image,
         benefits: productData.benefits,
-        featured: productData.featured,
+        featured: !!productData.featured,
         storage_instructions: productData.storage_instructions,
         nutritional_info: productData.nutritional_info,
         sourcing_info: productData.sourcing_info,
@@ -146,6 +200,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProduct = async (id: string, productData: Omit<Product, "id">) => {
+    console.log(`[PRODUCT] updateProduct: Updating ID ${id} with featured:`, !!productData.featured);
     const { error } = await supabase
       .from("products")
       .update({
@@ -155,7 +210,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         description: productData.description,
         image_url: productData.image,
         benefits: productData.benefits,
-        featured: productData.featured,
+        featured: !!productData.featured,
         storage_instructions: productData.storage_instructions,
         nutritional_info: productData.nutritional_info,
         sourcing_info: productData.sourcing_info,
@@ -183,7 +238,17 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ProductContext.Provider value={{ products, loading, addProduct, updateProduct, deleteProduct }}>
+    <ProductContext.Provider value={{ 
+      products, 
+      customAutocompleteNames, 
+      loading, 
+      addProduct, 
+      updateProduct, 
+      deleteProduct,
+      addCustomAutocompleteName,
+      deleteCustomAutocompleteName,
+      refreshCustomAutocompleteNames
+    }}>
       {children}
     </ProductContext.Provider>
   );

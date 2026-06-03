@@ -6,7 +6,7 @@ export interface Product {
   description: string;
   benefits: string[];
   image: string;
-  featured?: boolean;
+  featured: boolean;
   storage_instructions?: string;
   nutritional_info?: string;
   sourcing_info?: string;

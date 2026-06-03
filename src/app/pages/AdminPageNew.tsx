@@ -12,10 +12,11 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { Product } from "../data/products";
 
 export default function AdminPageNew() {
-  const [activeTab, setActiveTab] = useState<"products" | "categories">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "categories" | "quick-names">("products");
   const [searchTerm, setSearchTerm] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newQuickName, setNewQuickName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -27,7 +28,7 @@ export default function AdminPageNew() {
     isVisible: false
   });
 
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, addProduct, updateProduct, deleteProduct, customAutocompleteNames, addCustomAutocompleteName, deleteCustomAutocompleteName } = useProducts();
   const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
   const { logout, user, profile, refreshProfile, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -272,6 +273,15 @@ export default function AdminPageNew() {
               <Settings className="size-4" />
               Categories
             </button>
+            <button
+              onClick={() => setActiveTab("quick-names")}
+              className={`px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "quick-names" ? "bg-[#4CAF50] text-white shadow-md" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <Search className="size-4" />
+              Quick Names
+            </button>
           </div>
 
           <div className="relative flex-1 max-w-md">
@@ -285,15 +295,17 @@ export default function AdminPageNew() {
             />
           </div>
 
-          <motion.button
-            onClick={activeTab === "products" ? handleAddProduct : handleAddCategory}
-            className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#4CAF50]/30"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Plus className="size-5" />
-            Add {activeTab === "products" ? "Product" : "Category"}
-          </motion.button>
+          {activeTab !== "quick-names" && (
+            <motion.button
+              onClick={activeTab === "products" ? handleAddProduct : handleAddCategory}
+              className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#4CAF50]/30"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Plus className="size-5" />
+              Add {activeTab === "products" ? "Product" : "Category"}
+            </motion.button>
+          )}
         </div>
 
         {/* Stats */}
@@ -327,6 +339,7 @@ export default function AdminPageNew() {
           {activeTab === "products" ? (
             <div className="overflow-x-auto">
               <table className="w-full">
+                {/* ... (products table header) ... */}
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Product</th>
@@ -381,7 +394,7 @@ export default function AdminPageNew() {
               </table>
               {filteredProducts.length === 0 && <div className="p-12 text-center text-gray-500">No products found</div>}
             </div>
-          ) : (
+          ) : activeTab === "categories" ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -425,6 +438,68 @@ export default function AdminPageNew() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          ) : (
+            <div className="p-8">
+              <div className="max-w-2xl mx-auto">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Custom Autocomplete Names</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Add names that will appear in the "Interested Product Name" dropdown on the Contact Page, even if they aren't in your main product catalog.
+                </p>
+                
+                <div className="flex gap-3 mb-8">
+                  <input
+                    type="text"
+                    value={newQuickName}
+                    onChange={(e) => setNewQuickName(e.target.value)}
+                    placeholder="Enter product name..."
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent outline-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      console.log(`[ADMIN] Add Quick Name clicked: "${newQuickName}"`);
+                      if (newQuickName.trim()) {
+                        const success = await addCustomAutocompleteName(newQuickName.trim());
+                        console.log(`[ADMIN] Add Quick Name result:`, success);
+                        if (success) {
+                          setNewQuickName("");
+                          showToast("Name added to autocomplete");
+                        } else {
+                          showToast("Failed to add name. Check if table exists or if you are admin.", "error");
+                        }
+                      }
+                    }}
+                    className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-[#4CAF50]/30"
+                  >
+                    Add Name
+                  </button>
+                </div>
+
+                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wider">Current Custom Names</h4>
+                  <div className="space-y-2">
+                    {customAutocompleteNames.filter(name => name.toLowerCase().includes(searchTerm.toLowerCase())).map((name) => (
+                      <div key={name} className="bg-white px-4 py-3 rounded-xl flex items-center justify-between border border-gray-100 shadow-sm">
+                        <span className="font-medium text-gray-800">{name}</span>
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Remove "${name}" from autocomplete?`)) {
+                              await deleteCustomAutocompleteName(name);
+                              showToast("Name removed");
+                            }
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {customAutocompleteNames.length === 0 && (
+                      <div className="text-center py-8 text-gray-500 italic">No custom names added yet</div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>

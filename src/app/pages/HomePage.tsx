@@ -72,7 +72,58 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
-
+{/* Categories Preview */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.h2
+            className="text-4xl font-bold text-gray-900 text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            Shop by Category
+          </motion.h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {!categoriesLoading && categories.map((category, index) => (
+              <Link key={category.slug} to={`/products?category=${category.slug}`}>
+                <motion.div
+                  className="relative rounded-2xl overflow-hidden group cursor-pointer h-80"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -10 }}
+                >
+                  <motion.div
+                    className="absolute inset-0"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <img
+                      src={category.image_url}
+                      alt={category.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </motion.div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h3 className="text-2xl font-bold text-white mb-2">
+                      {category.name}
+                    </h3>
+                    <motion.div
+                      className="text-white flex items-center gap-2"
+                      whileHover={{ gap: 12 }}
+                    >
+                      <span>Explore</span>
+                      <span>→</span>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
       {/* Featured Products */}
       <section className="py-16 bg-[#F9F7F2]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -126,60 +177,7 @@ export default function HomePage() {
             </Link>
           </motion.div>
         </div>
-      </section>
-
-      {/* Categories Preview */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.h2
-            className="text-4xl font-bold text-gray-900 text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            Shop by Category
-          </motion.h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {!categoriesLoading && categories.map((category, index) => (
-              <Link key={category.slug} to={`/products?category=${category.slug}`}>
-                <motion.div
-                  className="relative rounded-2xl overflow-hidden group cursor-pointer h-80"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -10 }}
-                >
-                  <motion.div
-                    className="absolute inset-0"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <img
-                      src={category.image_url}
-                      alt={category.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </motion.div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h3 className="text-2xl font-bold text-white mb-2">
-                      {category.name}
-                    </h3>
-                    <motion.div
-                      className="text-white flex items-center gap-2"
-                      whileHover={{ gap: 12 }}
-                    >
-                      <span>Explore</span>
-                      <span>→</span>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      </section>      
     </div>
   );
 }

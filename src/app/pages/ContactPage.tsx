@@ -1,9 +1,11 @@
-import { motion } from "motion/react";
-import { Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Mail, Phone, MapPin, Send, Loader2, Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
+import { useProducts } from "../context/ProductContext";
 
 export default function ContactPage() {
+  const { products, customAutocompleteNames } = useProducts();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,6 +19,47 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  const featuredProductNames = products.filter(p => p.featured).map(p => p.name);
+  const otherProductNames = products.filter(p => !p.featured).map(p => p.name);
+  
+  const searchLower = formData.interestedProductName.toLowerCase();
+  
+  const filteredProductNames = [
+    ...featuredProductNames.filter(name => name.toLowerCase().includes(searchLower)),
+    ...otherProductNames.filter(name => name.toLowerCase().includes(searchLower)),
+    ...customAutocompleteNames.filter(name => name.toLowerCase().includes(searchLower))
+  ].filter((name, index, self) => self.indexOf(name) === index);
+
+  // If search is empty, show suggestions (Featured first, then others)
+  const displayNames = formData.interestedProductName.length === 0 
+    ? [
+        ...featuredProductNames,
+        ...otherProductNames,
+        ...customAutocompleteNames
+      ].filter((name, index, self) => self.indexOf(name) === index).slice(0, 10) // Show up to 10 suggestions
+    : filteredProductNames;
+
+  useEffect(() => {
+    console.log("[CONTACT] Autocomplete State:", {
+      showAutocomplete,
+      displayNamesCount: displayNames.length,
+      featuredCount: featuredProductNames.length,
+      productsCount: products.length
+    });
+  }, [showAutocomplete, displayNames, featuredProductNames, products]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setShowAutocomplete(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,18 +281,67 @@ export default function ContactPage() {
                   />
                 </div>
 
-                <div>
+                <div className="relative" ref={autocompleteRef}>
                   <label htmlFor="interestedProductName" className="block text-sm font-medium text-gray-700 mb-2">
                     Interested Product Name
                   </label>
-                  <input
-                    type="text"
-                    id="interestedProductName"
-                    value={formData.interestedProductName}
-                    onChange={(e) => setFormData({ ...formData, interestedProductName: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all"
-                    placeholder="e.g., Turmeric Powder"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="interestedProductName"
+                      value={formData.interestedProductName}
+                      onChange={(e) => {
+                        setFormData({ ...formData, interestedProductName: e.target.value });
+                        setShowAutocomplete(true);
+                      }}
+                      onFocus={() => {
+                        console.log("[CONTACT] Input Focused");
+                        setShowAutocomplete(true);
+                      }}
+                      onClick={() => {
+                        console.log("[CONTACT] Input Clicked");
+                        setShowAutocomplete(true);
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all"
+                      placeholder="e.g., Turmeric Powder"
+                    />
+                    <Search className="absolute right-4 top-1/2 -translate-y-1/2 size-5 text-gray-400 pointer-events-none" />
+                  </div>
+
+                  <AnimatePresence>
+                    {showAutocomplete && displayNames.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto"
+                      >
+                        {formData.interestedProductName.length === 0 && (
+                          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Suggested Products</span>
+                          </div>
+                        )}
+                        {displayNames.map((name, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b last:border-0 border-gray-100 flex items-center justify-between group"
+                            onClick={() => {
+                              setFormData({ ...formData, interestedProductName: name });
+                              setShowAutocomplete(false);
+                            }}
+                          >
+                            <span className="text-gray-900 font-medium">{name}</span>
+                            {featuredProductNames.includes(name) && (
+                              <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                                Featured
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div>

@@ -75,14 +75,14 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       price: 0.0, // Default price to 0.0
       description: formData.description,
       image: formData.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
-      featured: formData.featured,
+      featured: !!formData.featured,
       benefits: formData.benefits.filter(b => b.trim() !== ""),
       storage_instructions: formData.storage_instructions,
       nutritional_info: formData.nutritional_info,
       sourcing_info: formData.sourcing_info
     };
 
-    console.log(`[MODAL] handleSubmit: Processed product data:`, productData);
+    console.log(`[MODAL] handleSubmit: Processed product data featured value:`, productData.featured);
     console.log(`[MODAL] handleSubmit: Calling onSubmit...`);
     onSubmit(productData);
     console.log(`[MODAL] handleSubmit: Closing modal...`);

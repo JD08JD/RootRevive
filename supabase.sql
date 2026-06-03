@@ -51,6 +51,7 @@ create table if not exists categories (
 alter table profiles enable row level security;
 alter table products enable row level security;
 alter table categories enable row level security;
+alter table custom_autocomplete enable row level security;
 
 -- RLS: public read-only access to products
 drop policy if exists "Public can read products" on products;
@@ -92,13 +93,32 @@ create policy "Admin can manage categories"
     )
   );
 
--- Seed initial categories
-insert into categories (name, slug, image_url, color, icon, display_order)
-values 
-  ('Dried Fruits', 'fruits', 'https://images.unsplash.com/photo-1776188590471-db74f543cf52?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkcmllZCUyMGZydWl0cyUyMGFzc29ydG1lbnQlMjBuYXR1cmFsfGVufDF8fHx8MTc3NjI0NTE1MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', '#FFA726', 'Apple', 0),
-  ('Dehydrated Vegetables', 'vegetables', 'https://images.unsplash.com/photo-1646827153974-acb5bc2393b8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZWh5ZHJhdGVkJTIwdmVnZXRhYmxlcyUyMGhlYWx0aHl8ZW58MXx8fHwxNzc2MjQ1MTUyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', '#4CAF50', 'Carrot', 1),
-  ('Herbal Products', 'herbs', 'https://images.unsplash.com/photo-1757802412806-433e4e60eec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZXJiYWwlMjB0ZWElMjBvcmdhbmljJTIwbGVhdmVzfGVufDF8fHx8MTc3NjI0NTE1Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', '#8BC34A', 'Leaf', 2)
-on conflict (slug) do nothing;
+-- Custom autocomplete products (just names for the contact page)
+create table if not exists custom_autocomplete (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name text not null unique
+);
+
+-- RLS: public read-only access
+drop policy if exists "Public can read custom_autocomplete" on custom_autocomplete;
+create policy "Public can read custom_autocomplete"
+  on custom_autocomplete
+  for select
+  using ( true );
+
+-- RLS: admin users can manage
+drop policy if exists "Admin can manage custom_autocomplete" on custom_autocomplete;
+create policy "Admin can manage custom_autocomplete"
+  on custom_autocomplete
+  for all
+  using (
+    exists (
+      select 1 from profiles
+      where id = auth.uid()
+        and is_admin = true
+    )
+  );
 
 -- TEMPORARY: Allow authenticated users to insert products for testing
 drop policy if exists "Authenticated users can insert products" on products;
