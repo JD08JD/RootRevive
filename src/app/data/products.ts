@@ -7,6 +7,9 @@ export interface Product {
   benefits: string[];
   image: string;
   featured?: boolean;
+  storage_instructions?: string;
+  nutritional_info?: string;
+  sourcing_info?: string;
 }
 
 export const products: Product[] = [

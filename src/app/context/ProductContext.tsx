@@ -22,6 +22,9 @@ const mapProductRow = (row: any): Product => ({
   benefits: row.benefits || [],
   image: row.image_url || row.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
   featured: row.featured || false,
+  storage_instructions: row.storage_instructions,
+  nutritional_info: row.nutritional_info,
+  sourcing_info: row.sourcing_info,
 });
 
 export function ProductProvider({ children }: { children: ReactNode }) {
@@ -102,6 +105,9 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         image_url: productData.image,
         benefits: productData.benefits,
         featured: productData.featured,
+        storage_instructions: productData.storage_instructions,
+        nutritional_info: productData.nutritional_info,
+        sourcing_info: productData.sourcing_info,
         // created_by: user.id, // Temporarily removed for testing
       });
 
@@ -150,9 +156,11 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         image_url: productData.image,
         benefits: productData.benefits,
         featured: productData.featured,
+        storage_instructions: productData.storage_instructions,
+        nutritional_info: productData.nutritional_info,
+        sourcing_info: productData.sourcing_info,
       })
       .eq("id", id);
-
     if (error) {
       console.error("Unable to update product", error);
       return false;

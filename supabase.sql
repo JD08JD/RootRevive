@@ -28,7 +28,10 @@ create table if not exists products (
   stock integer default 0,
   is_organic boolean default false,
   is_active boolean not null default true,
-  created_by uuid references auth.users(id)
+  created_by uuid references auth.users(id),
+  storage_instructions text,
+  nutritional_info text,
+  sourcing_info text
 );
 
 -- Categories table

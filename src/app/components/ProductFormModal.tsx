@@ -22,7 +22,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
     description: "",
     image: "",
     featured: false,
-    benefits: ["", "", "", ""]
+    benefits: ["", "", "", ""],
+    storage_instructions: "",
+    nutritional_info: "",
+    sourcing_info: ""
   });
   const [uploading, setUploading] = useState(false);
 
@@ -37,7 +40,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
         description: product.description,
         image: product.image,
         featured: product.featured || false,
-        benefits: [...product.benefits, "", "", "", ""].slice(0, 4)
+        benefits: [...product.benefits, "", "", "", ""].slice(0, 4),
+        storage_instructions: product.storage_instructions || "",
+        nutritional_info: product.nutritional_info || "",
+        sourcing_info: product.sourcing_info || ""
       };
       console.log(`[MODAL] Setting edit form data:`, newFormData);
       setFormData(newFormData);
@@ -48,7 +54,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
         description: "",
         image: "",
         featured: false,
-        benefits: ["", "", "", ""]
+        benefits: ["", "", "", ""],
+        storage_instructions: "",
+        nutritional_info: "",
+        sourcing_info: ""
       };
       console.log(`[MODAL] Resetting form for add mode:`, resetFormData);
       setFormData(resetFormData);
@@ -67,7 +76,10 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       description: formData.description,
       image: formData.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
       featured: formData.featured,
-      benefits: formData.benefits.filter(b => b.trim() !== "")
+      benefits: formData.benefits.filter(b => b.trim() !== ""),
+      storage_instructions: formData.storage_instructions,
+      nutritional_info: formData.nutritional_info,
+      sourcing_info: formData.sourcing_info
     };
 
     console.log(`[MODAL] handleSubmit: Processed product data:`, productData);
@@ -302,6 +314,50 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
                     <label htmlFor="featured" className="text-sm font-medium text-gray-700">
                       Mark as Featured Product
                     </label>
+                  </div>
+
+                  {/* Additional Info Sections */}
+                  <div className="space-y-4 border-t border-gray-100 pt-6">
+                    <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Additional Information</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Storage Instructions
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.storage_instructions}
+                        onChange={(e) => setFormData({ ...formData, storage_instructions: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent resize-none"
+                        placeholder="e.g. Store in a cool, dry place..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nutritional Information
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.nutritional_info}
+                        onChange={(e) => setFormData({ ...formData, nutritional_info: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent resize-none"
+                        placeholder="e.g. Rich in vitamins and minerals..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Sourcing & Process
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={formData.sourcing_info}
+                        onChange={(e) => setFormData({ ...formData, sourcing_info: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent resize-none"
+                        placeholder="e.g. Sourced from sustainable organic farms..."
+                      />
+                    </div>
                   </div>
 
                   {/* Actions */}

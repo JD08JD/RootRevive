@@ -134,7 +134,7 @@ export default function ProductDetailPage() {
                   <ChevronDown className="size-5 text-gray-500 transition-transform duration-300 group-data-[state=open]:rotate-180" />
                 </Accordion.Trigger>
                 <Accordion.Content className="px-6 pb-4 text-gray-600">
-                  Store in a cool, dry place away from direct sunlight. Once opened, keep in an airtight container for maximum freshness. Shelf life: 12 months from production date.
+                  {product.storage_instructions || "Store in a cool, dry place away from direct sunlight. Once opened, keep in an airtight container for maximum freshness. Shelf life: 12 months from production date."}
                 </Accordion.Content>
               </Accordion.Item>
 
@@ -144,7 +144,7 @@ export default function ProductDetailPage() {
                   <ChevronDown className="size-5 text-gray-500 transition-transform duration-300 group-data-[state=open]:rotate-180" />
                 </Accordion.Trigger>
                 <Accordion.Content className="px-6 pb-4 text-gray-600">
-                  Our dehydration process preserves up to 95% of the original nutrients. Rich in vitamins, minerals, and dietary fiber. No added sugars, preservatives, or artificial colors.
+                  {product.nutritional_info || "Our dehydration process preserves up to 95% of the original nutrients. Rich in vitamins, minerals, and dietary fiber. No added sugars, preservatives, or artificial colors."}
                 </Accordion.Content>
               </Accordion.Item>
 
@@ -154,7 +154,7 @@ export default function ProductDetailPage() {
                   <ChevronDown className="size-5 text-gray-500 transition-transform duration-300 group-data-[state=open]:rotate-180" />
                 </Accordion.Trigger>
                 <Accordion.Content className="px-6 pb-4 text-gray-600">
-                  Sourced from sustainable, organic farms. Low-temperature dehydration process preserves nutrients and natural flavors. Quality checked at every stage of production.
+                  {product.sourcing_info || "Sourced from sustainable, organic farms. Low-temperature dehydration process preserves nutrients and natural flavors. Quality checked at every stage of production."}
                 </Accordion.Content>
               </Accordion.Item>
             </Accordion.Root>
