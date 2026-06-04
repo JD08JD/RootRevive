@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Edit, Trash2, Plus, Search, LogOut, Settings, Package, Layout, Save, Zap, Heart, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Search, LogOut, Settings, Package, Layout, Save, Zap, Heart, Loader2, Upload } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { useCategories, Category } from "../context/CategoryContext";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { Product } from "../data/products";
 
 import { useSite } from "../context/SiteContext";
+import { supabase } from "../lib/supabaseClient";
 
 export default function AdminPageNew() {
   const [activeTab, setActiveTab] = useState<"products" | "categories" | "quick-names" | "site-editor">("products");
@@ -23,7 +24,49 @@ export default function AdminPageNew() {
   const { getPageContent, updatePageContent } = useSite();
   const [siteContent, setSiteContent] = useState<any>(null);
   const [isSavingSite, setIsSavingSite] = useState(false);
+  const [isUploadingSiteImage, setIsUploadingSiteImage] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const handleSiteImageUpload = async (file: File, section: string, subField?: string) => {
+    if (!file) return;
+    setIsUploadingSiteImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `site/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+
+      // Update nested state
+      if (subField) {
+        setSiteContent({
+          ...siteContent,
+          [section]: { ...siteContent[section], [subField]: publicUrl }
+        });
+      } else {
+        setSiteContent({
+          ...siteContent,
+          [section]: { ...siteContent[section], image: publicUrl }
+        });
+      }
+      showToast("Image uploaded successfully");
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      showToast(`Upload failed: ${err.message}`, "error");
+    } finally {
+      setIsUploadingSiteImage(false);
+    }
+  };
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [productModalMode, setProductModalMode] = useState<"add" | "edit">("add");
   const [categoryModalMode, setCategoryModalMode] = useState<"add" | "edit">("add");
@@ -166,18 +209,18 @@ export default function AdminPageNew() {
 
   const handleProductSubmit = async (productData: Omit<Product, "id">) => {
     if (productModalMode === "add") {
-      const success = await addProduct(productData);
-      if (success) {
+      const result = await addProduct(productData);
+      if (result.success) {
         showToast(`"${productData.name}" has been added successfully`, "success");
       } else {
-        showToast(`Unable to add "${productData.name}".`, "error");
+        showToast(`Failed: ${result.error}`, "error");
       }
     } else if (editingProduct) {
-      const success = await updateProduct(editingProduct.id, productData);
-      if (success) {
+      const result = await updateProduct(editingProduct.id, productData);
+      if (result.success) {
         showToast(`"${productData.name}" has been updated successfully`, "success");
       } else {
-        showToast(`Unable to update "${productData.name}".`, "error");
+        showToast(`Failed: ${result.error}`, "error");
       }
     }
   };
@@ -504,13 +547,28 @@ export default function AdminPageNew() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-4 py-2 border rounded-lg" 
-                            value={siteContent.story.image}
-                            onChange={(e) => setSiteContent({...siteContent, story: {...siteContent.story, image: e.target.value}})}
-                          />
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Image URL / Upload</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text" 
+                              className="flex-1 px-4 py-2 border rounded-lg" 
+                              value={siteContent.story.image}
+                              onChange={(e) => setSiteContent({...siteContent, story: {...siteContent.story, image: e.target.value}})}
+                            />
+                            <label className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center min-w-[50px]">
+                              {isUploadingSiteImage ? <Loader2 className="size-5 animate-spin" /> : <Upload className="size-5" />}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleSiteImageUpload(file, "story");
+                                }}
+                                className="hidden"
+                                disabled={isUploadingSiteImage}
+                              />
+                            </label>
+                          </div>
                         </div>
                         <div className="space-y-3">
                           <label className="block text-sm font-medium text-gray-700">Paragraphs</label>
@@ -527,6 +585,54 @@ export default function AdminPageNew() {
                               }}
                             />
                           ))}
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Process Section Header */}
+                    <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2"><Zap className="size-5 text-[#4CAF50]" /> Process Details</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Heading</label>
+                          <input 
+                            type="text" 
+                            className="w-full px-4 py-2 border rounded-lg" 
+                            value={siteContent.process.heading}
+                            onChange={(e) => setSiteContent({...siteContent, process: {...siteContent.process, heading: e.target.value}})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
+                          <textarea 
+                            className="w-full px-4 py-2 border rounded-lg" 
+                            value={siteContent.process.tagline}
+                            onChange={(e) => setSiteContent({...siteContent, process: {...siteContent.process, tagline: e.target.value}})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Process Image URL / Upload</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text" 
+                              className="flex-1 px-4 py-2 border rounded-lg" 
+                              value={siteContent.process.image}
+                              onChange={(e) => setSiteContent({...siteContent, process: {...siteContent.process, image: e.target.value}})}
+                            />
+                            <label className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center min-w-[50px]">
+                              {isUploadingSiteImage ? <Loader2 className="size-5 animate-spin" /> : <Upload className="size-5" />}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleSiteImageUpload(file, "process");
+                                }}
+                                className="hidden"
+                                disabled={isUploadingSiteImage}
+                              />
+                            </label>
+                          </div>
                         </div>
                       </div>
                     </section>

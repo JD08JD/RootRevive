@@ -39,7 +39,15 @@ const iconMap: Record<string, any> = { Leaf, Sun, Droplet, Heart };
 
 export default function AboutPage() {
   const { getPageContent, loading } = useSite();
-  const content = getPageContent("about") || DEFAULT_ABOUT_CONTENT;
+  const rawContent = getPageContent("about");
+  
+  // Deep merge rawContent with DEFAULT_ABOUT_CONTENT
+  const content = rawContent ? {
+    hero: { ...DEFAULT_ABOUT_CONTENT.hero, ...rawContent.hero },
+    story: { ...DEFAULT_ABOUT_CONTENT.story, ...rawContent.story },
+    process: { ...DEFAULT_ABOUT_CONTENT.process, ...rawContent.process },
+    values: rawContent.values || DEFAULT_ABOUT_CONTENT.values
+  } : DEFAULT_ABOUT_CONTENT;
 
   if (loading) {
     return (

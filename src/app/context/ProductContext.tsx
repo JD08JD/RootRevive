@@ -7,9 +7,9 @@ interface ProductContextType {
   products: Product[];
   customAutocompleteNames: string[];
   loading: boolean;
-  addProduct: (product: Omit<Product, "id">) => Promise<boolean>;
-  updateProduct: (id: string, product: Omit<Product, "id">) => Promise<boolean>;
-  deleteProduct: (id: string) => Promise<boolean>;
+  addProduct: (product: Omit<Product, "id">) => Promise<{ success: boolean; error?: string }>;
+  updateProduct: (id: string, product: Omit<Product, "id">) => Promise<{ success: boolean; error?: string }>;
+  deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
   addCustomAutocompleteName: (name: string) => Promise<boolean>;
   deleteCustomAutocompleteName: (name: string) => Promise<boolean>;
   refreshCustomAutocompleteNames: () => Promise<void>;
@@ -118,29 +118,10 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     console.log(`[PRODUCT] addProduct: Current user:`, user);
 
     if (!user) {
-      console.error(`[PRODUCT] addProduct: No user authenticated - cannot add product`);
-      return false;
-    }
-
-    // Check session
-    const { data: sessionData } = await supabase.auth.getSession();
-    console.log(`[PRODUCT] addProduct: Current session:`, sessionData.session ? 'Valid' : 'None');
-
-    if (!sessionData.session) {
-      console.error(`[PRODUCT] addProduct: No valid session - refreshing...`);
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.error(`[PRODUCT] addProduct: Session refresh failed:`, refreshError);
-        return false;
-      }
-      console.log(`[PRODUCT] addProduct: Session refreshed`);
+      return { success: false, error: "No user authenticated" };
     }
 
     try {
-      console.log(`[PRODUCT] addProduct: About to call supabase.from("products").insert()`);
-      console.log(`[PRODUCT] addProduct: Insert data with featured:`, !!productData.featured);
-
-      // Create a timeout promise to prevent hanging UI
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Supabase insert timeout after 15 seconds. Check network or ad-blockers.')), 15000);
       });
@@ -158,59 +139,77 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         sourcing_info: productData.sourcing_info,
       });
 
-      const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any;
-      console.log(`[PRODUCT] addProduct: Response received`);
+      const { error } = await Promise.race([insertPromise, timeoutPromise]) as any;
 
       if (error) {
-        console.error(`[PRODUCT] addProduct: Supabase error:`, error);
-        return false;
+        console.error(`[PRODUCT] addProduct error:`, error);
+        console.log(`[PRODUCT] addProduct error code: ${error.code}, message: ${error.message}`);
+        return { success: false, error: `${error.message} (${error.code})` };
       }
 
       await refreshProducts();
-      return true;
+      return { success: true };
     } catch (err: any) {
       console.error(`[PRODUCT] addProduct: Exception:`, err);
-      alert(`Save Failed: ${err.message}`);
-      return false;
+      return { success: false, error: err.message };
     }
   };
 
   const updateProduct = async (id: string, productData: Omit<Product, "id">) => {
-    console.log(`[PRODUCT] updateProduct: Updating ID ${id} with featured:`, !!productData.featured);
-    const { error } = await supabase
-      .from("products")
-      .update({
-        name: productData.name,
-        category: productData.category,
-        price: productData.price,
-        description: productData.description,
-        image_url: productData.image,
-        benefits: productData.benefits,
-        featured: !!productData.featured,
-        storage_instructions: productData.storage_instructions,
-        nutritional_info: productData.nutritional_info,
-        sourcing_info: productData.sourcing_info,
-      })
-      .eq("id", id);
-    if (error) {
-      console.error("Unable to update product", error);
-      return false;
-    }
+    console.log(`[PRODUCT] updateProduct: Updating ID ${id}...`);
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Update timed out after 15 seconds')), 15000);
+      });
 
-    await refreshProducts();
-    return true;
+      const updatePromise = supabase
+        .from("products")
+        .update({
+          name: productData.name,
+          category: productData.category,
+          price: productData.price,
+          description: productData.description,
+          image_url: productData.image,
+          benefits: productData.benefits,
+          featured: !!productData.featured,
+          storage_instructions: productData.storage_instructions,
+          nutritional_info: productData.nutritional_info,
+          sourcing_info: productData.sourcing_info,
+        })
+        .eq("id", id);
+
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
+
+      if (error) {
+        console.error("[PRODUCT] updateProduct error:", error);
+        console.log(`[PRODUCT] updateProduct error code: ${error.code}, message: ${error.message}`);
+        return { success: false, error: `${error.message} (${error.code})` };
+      }
+
+      await refreshProducts();
+      return { success: true };
+    } catch (err: any) {
+      console.error("[PRODUCT] updateProduct exception:", err);
+      return { success: false, error: err.message };
+    }
   };
 
   const deleteProduct = async (id: string) => {
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    console.log(`[PRODUCT] deleteProduct: Deleting ID ${id}...`);
+    try {
+      const { error } = await supabase.from("products").delete().eq("id", id);
 
-    if (error) {
-      console.error("Unable to delete product", error);
-      return false;
+      if (error) {
+        console.error("[PRODUCT] deleteProduct error:", error);
+        return { success: false, error: error.message };
+      }
+
+      await refreshProducts();
+      return { success: true };
+    } catch (err: any) {
+      console.error("[PRODUCT] deleteProduct exception:", err);
+      return { success: false, error: err.message };
     }
-
-    await refreshProducts();
-    return true;
   };
 
   return (

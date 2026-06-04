@@ -66,13 +66,12 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`[MODAL] handleSubmit: Form submitted at ${new Date().toISOString()}`);
-    console.log(`[MODAL] handleSubmit: Current form data:`, formData);
+    console.log(`[MODAL] handleSubmit started`);
 
     const productData: Omit<Product, "id"> = {
       name: formData.name,
       category: formData.category,
-      price: 0.0, // Default price to 0.0
+      price: 0, // Default price to 0 as it is removed from UI
       description: formData.description,
       image: formData.image || "https://images.unsplash.com/photo-1776188590471-db74f543cf52?w=400",
       featured: !!formData.featured,
@@ -82,10 +81,8 @@ export default function ProductFormModal({ isOpen, onClose, onSubmit, product, m
       sourcing_info: formData.sourcing_info
     };
 
-    console.log(`[MODAL] handleSubmit: Processed product data featured value:`, productData.featured);
-    console.log(`[MODAL] handleSubmit: Calling onSubmit...`);
+    console.log(`[MODAL] Sending product data:`, productData);
     onSubmit(productData);
-    console.log(`[MODAL] handleSubmit: Closing modal...`);
     onClose();
   };
 

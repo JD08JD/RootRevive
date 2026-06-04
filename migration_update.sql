@@ -75,3 +75,25 @@ VALUES ('about', '{
   "values": []
 }')
 ON CONFLICT (page_key) DO NOTHING;
+
+-- 7. REPAIR: Reset Product & Category Policies
+DROP POLICY IF EXISTS "Admin can manage products" ON products;
+CREATE POLICY "Admin can manage products" ON products FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+);
+
+DROP POLICY IF EXISTS "Admin can manage categories" ON categories;
+CREATE POLICY "Admin can manage categories" ON categories FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+);
+
+-- Ensure public reading still works
+DROP POLICY IF EXISTS "Public can read products" ON products;
+CREATE POLICY "Public can read products" ON products FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public can read categories" ON categories;
+CREATE POLICY "Public can read categories" ON categories FOR SELECT USING (true);

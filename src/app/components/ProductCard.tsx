@@ -62,9 +62,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </p>
           
           <div className="flex items-center justify-between">
-            {/* <span className="text-2xl font-bold text-[#4CAF50]">
-              ${product.price}
-            </span> */}
             <motion.div
               className="flex items-center gap-1 text-sm font-medium text-[#4CAF50]"
               whileHover={{ gap: 8 }}
