@@ -248,10 +248,12 @@ export default function AdminPageNew() {
       try {
         setIsLoggingOut(true);
         await logout();
-        // Redirect is handled by the useEffect watching isAuthenticated
+        console.log("[ADMIN] Logout successful, redirecting...");
+        navigate("/login");
       } catch (err) {
         console.error("Logout error:", err);
         showToast("Error during logout. Please try again.", "error");
+      } finally {
         setIsLoggingOut(false);
       }
     }

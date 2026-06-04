@@ -165,13 +165,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log(`[AUTH] onAuthStateChange: Event=${_event}, Session=${!!session}`);
+      
+      if (_event === "SIGNED_OUT" || _event === "USER_DELETED") {
+        console.log(`[AUTH] User signed out or deleted, clearing state...`);
+        setUser(null);
+        setProfile(null);
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
       try {
         let sessionUser = session?.user || null;
 
-        if (!sessionUser) {
-          console.log(`[AUTH] onAuthStateChange: No session in event, trying restoreSession...`);
+        if (!sessionUser && _event !== "INITIAL_SESSION") {
+          console.log(`[AUTH] No session in event, trying restoreSession...`);
           sessionUser = await restoreSession();
         }
 
@@ -179,19 +189,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(Boolean(sessionUser));
 
         if (sessionUser) {
-          console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
+          console.log(`[AUTH] User authenticated:`, sessionUser.email);
           const fetchedProfile = await fetchProfile(sessionUser.id);
           if (!fetchedProfile) {
             await createProfileIfMissing(sessionUser);
           }
-        } else if (_event === "SIGNED_OUT" || _event === "USER_DELETED") {
-          console.log(`[AUTH] onAuthStateChange: User logged out or deleted`);
-          setProfile(null);
-        } else {
-          console.log(`[AUTH] onAuthStateChange: Session event without user, no profile change made`);
         }
       } catch (err) {
-        console.error(`[AUTH] onAuthStateChange: Error handling auth state change:`, err);
+        console.error(`[AUTH] Error handling auth state change:`, err);
       } finally {
         setIsLoading(false);
       }
