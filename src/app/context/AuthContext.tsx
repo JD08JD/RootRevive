@@ -140,19 +140,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       console.log(`[AUTH] initAuth: Checking session...`);
+      setIsLoading(true);
       try {
         const sessionUser = await restoreSession();
 
         if (sessionUser) {
           console.log(`[AUTH] initAuth: Session found for user:`, sessionUser.email);
-          setUser(sessionUser);
-          setIsAuthenticated(true);
           const fetchedProfile = await fetchProfile(sessionUser.id);
           if (!fetchedProfile) {
             await createProfileIfMissing(sessionUser);
           }
+          setUser(sessionUser);
+          setIsAuthenticated(true);
         } else {
           console.log(`[AUTH] initAuth: No session found`);
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (err) {
         console.error(`[AUTH] initAuth: Error during auth initialization:`, err);
@@ -185,16 +188,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionUser = await restoreSession();
         }
 
-        setUser(sessionUser);
-        setIsAuthenticated(Boolean(sessionUser));
-
         if (sessionUser) {
-          console.log(`[AUTH] User authenticated:`, sessionUser.email);
+          console.log(`[AUTH] onAuthStateChange: User authenticated:`, sessionUser.email);
           const fetchedProfile = await fetchProfile(sessionUser.id);
           if (!fetchedProfile) {
             await createProfileIfMissing(sessionUser);
           }
+
+          setUser(sessionUser);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setProfile(null);
+          setIsAuthenticated(false);
         }
+
       } catch (err) {
         console.error(`[AUTH] Error handling auth state change:`, err);
       } finally {
