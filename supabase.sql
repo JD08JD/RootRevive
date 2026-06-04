@@ -47,11 +47,40 @@ create table if not exists categories (
   display_order integer default 0
 );
 
--- Enable row level security
+-- Page content for dynamic text/images (JSON storage)
+create table if not exists page_content (
+  id uuid primary key default gen_random_uuid(),
+  page_key text unique not null,
+  content jsonb not null,
+  updated_at timestamptz default now()
+);
+
+-- Enable RLS
 alter table profiles enable row level security;
 alter table products enable row level security;
 alter table categories enable row level security;
 alter table custom_autocomplete enable row level security;
+alter table page_content enable row level security;
+
+-- RLS: public read-only
+drop policy if exists "Public can read page_content" on page_content;
+create policy "Public can read page_content"
+  on page_content
+  for select
+  using ( true );
+
+-- RLS: admin management
+drop policy if exists "Admin can manage page_content" on page_content;
+create policy "Admin can manage page_content"
+  on page_content
+  for all
+  using (
+    exists (
+      select 1 from profiles
+      where id = auth.uid()
+        and is_admin = true
+    )
+  );
 
 -- RLS: public read-only access to products
 drop policy if exists "Public can read products" on products;

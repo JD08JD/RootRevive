@@ -138,18 +138,12 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log(`[PRODUCT] addProduct: About to call supabase.from("products").insert()`);
-      console.log(`[PRODUCT] addProduct: Insert data:`, {
-        name: productData.name,
-        category: productData.category,
-        price: productData.price,
-        description: productData.description,
-        image_url: productData.image,
-        benefits: productData.benefits,
-        featured: productData.featured,
-        created_by: user.id,
-      });
-
       console.log(`[PRODUCT] addProduct: Insert data with featured:`, !!productData.featured);
+
+      // Create a timeout promise to prevent hanging UI
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Supabase insert timeout after 15 seconds. Check network or ad-blockers.')), 15000);
+      });
 
       const insertPromise = supabase.from("products").insert({
         name: productData.name,
@@ -162,39 +156,21 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         storage_instructions: productData.storage_instructions,
         nutritional_info: productData.nutritional_info,
         sourcing_info: productData.sourcing_info,
-        // created_by: user.id, // Temporarily removed for testing
-      });
-
-      // Add timeout to detect hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Supabase insert timeout after 30 seconds')), 30000);
       });
 
       const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any;
-      console.log(`[PRODUCT] addProduct: Promise resolved`);
-
-      console.log(`[PRODUCT] addProduct: Supabase response - data:`, data);
-      console.log(`[PRODUCT] addProduct: Supabase response - error:`, error);
+      console.log(`[PRODUCT] addProduct: Response received`);
 
       if (error) {
-        console.error(`[PRODUCT] addProduct: Supabase insert error:`, error);
-        console.error(`[PRODUCT] addProduct: Error details:`, {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
+        console.error(`[PRODUCT] addProduct: Supabase error:`, error);
         return false;
       }
 
-      console.log(`[PRODUCT] addProduct: Insert successful, refreshing products...`);
       await refreshProducts();
-      console.log(`[PRODUCT] addProduct: Complete success`);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[PRODUCT] addProduct: Exception:`, err);
-      console.error(`[PRODUCT] addProduct: Exception type:`, typeof err);
-      console.error(`[PRODUCT] addProduct: Exception stack:`, err instanceof Error ? err.stack : 'No stack');
+      alert(`Save Failed: ${err.message}`);
       return false;
     }
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Edit, Trash2, Plus, Search, LogOut, Settings, Package } from "lucide-react";
+import { Edit, Trash2, Plus, Search, LogOut, Settings, Package, Layout, Save, Zap, Heart, Loader2 } from "lucide-react";
 import { useProducts } from "../context/ProductContext";
 import { useCategories, Category } from "../context/CategoryContext";
 import { useAuth } from "../context/AuthContext";
@@ -11,13 +11,18 @@ import Toast from "../components/Toast";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { Product } from "../data/products";
 
+import { useSite } from "../context/SiteContext";
+
 export default function AdminPageNew() {
-  const [activeTab, setActiveTab] = useState<"products" | "categories" | "quick-names">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "categories" | "quick-names" | "site-editor">("products");
   const [searchTerm, setSearchTerm] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [newQuickName, setNewQuickName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { getPageContent, updatePageContent } = useSite();
+  const [siteContent, setSiteContent] = useState<any>(null);
+  const [isSavingSite, setIsSavingSite] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [productModalMode, setProductModalMode] = useState<"add" | "edit">("add");
@@ -33,7 +38,32 @@ export default function AdminPageNew() {
   const { logout, user, profile, refreshProfile, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  console.log(`[ADMIN] AdminPageNew render at ${new Date().toISOString()}`);
+  useEffect(() => {
+    if (activeTab === "site-editor" && !siteContent) {
+      const content = getPageContent("about");
+      if (content) {
+        setSiteContent(JSON.parse(JSON.stringify(content)));
+      } else {
+        // Use the default from AboutPage as a starting point
+        setSiteContent({
+          hero: { title: "Our Story", tagline: "Bringing the goodness of nature to your table through sustainable dehydration" },
+          story: { heading: "From Farm to Table", image: "", paragraphs: ["", "", ""] },
+          process: { heading: "Our Dehydration Process", tagline: "", image: "", steps: [
+            { step: "01", title: "Harvest", description: "" },
+            { step: "02", title: "Prepare", description: "" },
+            { step: "03", title: "Dehydrate", description: "" },
+            { step: "04", title: "Package", description: "" }
+          ]},
+          values: [
+            { icon: "Leaf", title: "Sustainable Sourcing", description: "" },
+            { icon: "Sun", title: "Natural Process", description: "" },
+            { icon: "Droplet", title: "Quality First", description: "" },
+            { icon: "Heart", title: "Healthy Living", description: "" }
+          ]
+        });
+      }
+    }
+  }, [activeTab, getPageContent, siteContent]);
   console.log(`[ADMIN] AdminPageNew - user:`, user);
   console.log(`[ADMIN] AdminPageNew - profile:`, profile);
   console.log(`[ADMIN] AdminPageNew - products count:`, products.length);
@@ -282,29 +312,42 @@ export default function AdminPageNew() {
               <Search className="size-4" />
               Quick Names
             </button>
-          </div>
-
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
-            />
-          </div>
-
-          {activeTab !== "quick-names" && (
-            <motion.button
-              onClick={activeTab === "products" ? handleAddProduct : handleAddCategory}
-              className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#4CAF50]/30"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
+              onClick={() => setActiveTab("site-editor")}
+              className={`px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "site-editor" ? "bg-[#4CAF50] text-white shadow-md" : "text-gray-600 hover:bg-gray-50"
+              }`}
             >
-              <Plus className="size-5" />
-              Add {activeTab === "products" ? "Product" : "Category"}
-            </motion.button>
+              <Layout className="size-4" />
+              Site Editor
+            </button>
+          </div>
+
+          {activeTab !== "site-editor" && (
+            <>
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={`Search ${activeTab}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent"
+                />
+              </div>
+
+              {activeTab !== "quick-names" && (
+                <motion.button
+                  onClick={activeTab === "products" ? handleAddProduct : handleAddCategory}
+                  className="bg-[#4CAF50] text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#4CAF50]/30"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Plus className="size-5" />
+                  Add {activeTab === "products" ? "Product" : "Category"}
+                </motion.button>
+              )}
+            </>
           )}
         </div>
 
@@ -394,50 +437,183 @@ export default function AdminPageNew() {
               </table>
               {filteredProducts.length === 0 && <div className="p-12 text-center text-gray-500">No products found</div>}
             </div>
-          ) : activeTab === "categories" ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Category</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Slug</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Order</th>
-                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((category, index) => (
-                    <motion.tr
-                      key={category.id}
-                      className="hover:bg-gray-50 transition-colors"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="size-10 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: category.color }}>
-                            <Settings className="size-5" />
+          ) : activeTab === "site-editor" ? (
+            <div className="p-8">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900">About Page Editor</h3>
+                  <button
+                    onClick={async () => {
+                      setIsSavingSite(true);
+                      const result = await updatePageContent("about", siteContent);
+                      setIsSavingSite(false);
+                      if (result.success) {
+                        showToast("About page updated successfully");
+                      } else {
+                        showToast(`Failed: ${result.error}`, "error");
+                        console.error("Save failed:", result.error);
+                      }
+                    }}
+                    disabled={isSavingSite}
+                    className="bg-[#4CAF50] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-[#4CAF50]/30 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSavingSite ? <Loader2 className="size-5 animate-spin" /> : <Save className="size-5" />}
+                    Save Changes
+                  </button>
+                </div>
+
+                {!siteContent ? (
+                  <div className="flex justify-center p-20"><Loader2 className="size-10 animate-spin text-gray-300" /></div>
+                ) : (
+                  <div className="space-y-12 pb-20">
+                    {/* Hero Section */}
+                    <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2"><Layout className="size-5 text-[#4CAF50]" /> Hero Section</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                          <input 
+                            type="text" 
+                            className="w-full px-4 py-2 border rounded-lg" 
+                            value={siteContent.hero.title}
+                            onChange={(e) => setSiteContent({...siteContent, hero: {...siteContent.hero, title: e.target.value}})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
+                          <textarea 
+                            className="w-full px-4 py-2 border rounded-lg" 
+                            value={siteContent.hero.tagline}
+                            onChange={(e) => setSiteContent({...siteContent, hero: {...siteContent.hero, tagline: e.target.value}})}
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Story Section */}
+                    <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2"><Heart className="size-5 text-[#4CAF50]" /> Our Story</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Heading</label>
+                          <input 
+                            type="text" 
+                            className="w-full px-4 py-2 border rounded-lg" 
+                            value={siteContent.story.heading}
+                            onChange={(e) => setSiteContent({...siteContent, story: {...siteContent.story, heading: e.target.value}})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                          <input 
+                            type="text" 
+                            className="w-full px-4 py-2 border rounded-lg" 
+                            value={siteContent.story.image}
+                            onChange={(e) => setSiteContent({...siteContent, story: {...siteContent.story, image: e.target.value}})}
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <label className="block text-sm font-medium text-gray-700">Paragraphs</label>
+                          {siteContent.story.paragraphs.map((p: string, i: number) => (
+                            <textarea 
+                              key={i}
+                              className="w-full px-4 py-2 border rounded-lg text-sm" 
+                              rows={3}
+                              value={p}
+                              onChange={(e) => {
+                                const newParas = [...siteContent.story.paragraphs];
+                                newParas[i] = e.target.value;
+                                setSiteContent({...siteContent, story: {...siteContent.story, paragraphs: newParas}});
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Process Steps */}
+                    <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2"><Zap className="size-5 text-[#4CAF50]" /> Process Steps</h4>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {siteContent.process.steps.map((step: any, i: number) => (
+                          <div key={i} className="p-4 border rounded-xl bg-gray-50">
+                            <div className="font-bold text-xs text-gray-400 mb-2 uppercase">Step {step.step}</div>
+                            <input 
+                              type="text" 
+                              className="w-full px-3 py-2 border rounded-lg mb-2 text-sm font-bold" 
+                              placeholder="Title"
+                              value={step.title}
+                              onChange={(e) => {
+                                const newSteps = [...siteContent.process.steps];
+                                newSteps[i] = {...step, title: e.target.value};
+                                setSiteContent({...siteContent, process: {...siteContent.process, steps: newSteps}});
+                              }}
+                            />
+                            <textarea 
+                              className="w-full px-3 py-2 border rounded-lg text-sm" 
+                              placeholder="Description"
+                              rows={2}
+                              value={step.description}
+                              onChange={(e) => {
+                                const newSteps = [...siteContent.process.steps];
+                                newSteps[i] = {...step, description: e.target.value};
+                                setSiteContent({...siteContent, process: {...siteContent.process, steps: newSteps}});
+                              }}
+                            />
                           </div>
-                          <div className="font-medium text-gray-900">{category.name}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{category.slug}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{category.display_order}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEditCategory(category)} className="p-2 text-gray-600 hover:text-[#4CAF50] hover:bg-green-50 rounded-lg transition-colors">
-                            <Edit className="size-4" />
-                          </button>
-                          <button onClick={() => handleDeleteCategory(category)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <Trash2 className="size-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+                        ))}
+                      </div>
+                    </section>
+
+                    {/* Values Section */}
+                    <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2"><Heart className="size-5 text-[#4CAF50]" /> Our Values</h4>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {siteContent.values.map((val: any, i: number) => (
+                          <div key={i} className="p-4 border rounded-xl bg-gray-50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <select 
+                                className="text-xs border rounded p-1"
+                                value={val.icon}
+                                onChange={(e) => {
+                                  const newVals = [...siteContent.values];
+                                  newVals[i] = {...val, icon: e.target.value};
+                                  setSiteContent({...siteContent, values: newVals});
+                                }}
+                              >
+                                <option value="Leaf">Leaf</option>
+                                <option value="Sun">Sun</option>
+                                <option value="Droplet">Droplet</option>
+                                <option value="Heart">Heart</option>
+                              </select>
+                            </div>
+                            <input 
+                              type="text" 
+                              className="w-full px-3 py-2 border rounded-lg mb-2 text-sm font-bold" 
+                              value={val.title}
+                              onChange={(e) => {
+                                const newVals = [...siteContent.values];
+                                newVals[i] = {...val, title: e.target.value};
+                                setSiteContent({...siteContent, values: newVals});
+                              }}
+                            />
+                            <textarea 
+                              className="w-full px-3 py-2 border rounded-lg text-sm" 
+                              rows={3}
+                              value={val.description}
+                              onChange={(e) => {
+                                const newVals = [...siteContent.values];
+                                newVals[i] = {...val, description: e.target.value};
+                                setSiteContent({...siteContent, values: newVals});
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="p-8">
